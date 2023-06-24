@@ -95,8 +95,7 @@ fun App() {
 
                 NavHost(
                     navController = navController,
-//                    startDestination = Screens.Farm.name
-                    startDestination = Screens.Inventory.name
+                    startDestination = Screens.Farm.name
 
                 ){
 //                  Farm mode:
