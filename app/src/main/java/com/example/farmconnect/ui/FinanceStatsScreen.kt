@@ -85,7 +85,7 @@ fun DataTable(){
                 Cell(
                     text = "Quantity (lbs)",
                     alignment = TextAlign.Center,
-                    weight = .23f,
+                    weight = .25f,
                     title = true
                 )
                 Cell(
@@ -177,8 +177,8 @@ fun FinanceStatsScreen(){
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ){
-                    Text(text = "Total Revenue")
-                    Text(text = '$' + String.format("%.2f", totalRevenue()), fontSize = 27.sp, fontWeight = FontWeight.Bold )
+                    Text(text = "Total Revenue", color = Color.Black)
+                    Text(text = '$' + String.format("%.2f", totalRevenue()), fontSize = 27.sp, fontWeight = FontWeight.Bold, color = Color.Black )
                 }
             }
             Card(
@@ -193,8 +193,8 @@ fun FinanceStatsScreen(){
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ){
-                    Text(text = "Total Quantity Sold")
-                    Text(text = String.format("%.0f", totalQuantity()) + " lbs", fontSize = 27.sp, fontWeight = FontWeight.Bold )
+                    Text(text = "Total Quantity", color = Color.Black)
+                    Text(text = String.format("%.0f", totalQuantity()) + " lbs", fontSize = 27.sp, fontWeight = FontWeight.Bold, color= Color.Black )
                 }
             }
         }
