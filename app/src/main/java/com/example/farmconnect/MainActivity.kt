@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.example.farmconnect.ui.AppBar
 import com.example.farmconnect.ui.DrawerContent
 import com.example.farmconnect.ui.DrawerHeader
+import com.example.farmconnect.ui.FinanceStatsScreen
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import kotlinx.coroutines.launch
 
@@ -68,7 +69,9 @@ fun App(name: String, modifier: Modifier = Modifier) {
 
             Surface(modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)){
+                .padding(paddingValues)
+                .padding(horizontal = 20.dp, vertical = 15.dp)
+            ){
                 Text(
                     text = "Hello $name!",
                     modifier = modifier
