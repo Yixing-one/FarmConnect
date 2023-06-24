@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import com.example.farmconnect.R
+import com.example.farmconnect.Screens
 
 data class NavItem(
     val title : String,
@@ -16,15 +17,15 @@ object DataSource {
     val menuOptions = listOf(
         NavItem(
             title = "Farmer",
-            route = "farmer",
+            route = Screens.Farm.name,
         ),
         NavItem(
             title = "Charity",
-            route = "charity",
+            route = Screens.Charity.name,
         ),
         NavItem(
             title = "Settings",
-            route = "settings",
+            route = Screens.Settings.name,
         )
     )
 }
