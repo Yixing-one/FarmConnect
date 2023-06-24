@@ -1,6 +1,7 @@
 package com.example.farmconnect.ui
 
 import android.graphics.drawable.Icon
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,8 +57,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.farmconnect.App
 import com.example.farmconnect.R
+import com.example.farmconnect.Screens
 import com.example.farmconnect.data.DataSource
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.example.farmconnect.ui.theme.PurpleGrey40
@@ -65,6 +69,7 @@ import com.example.farmconnect.ui.theme.darkGreen
 import com.example.farmconnect.ui.theme.lightGreen
 
 import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,13 +98,27 @@ fun getIcon(title : String) {
 
 }
 
+val screenMap: HashMap<String, List<String>> = hashMapOf(
+    Screens.Farm.name to listOf(Screens.Farm.name, Screens.Finance.name, Screens.Marketplace.name, Screens.Inventory.name),
+    Screens.Charity.name to listOf(Screens.Charity.name),
+    Screens.Settings.name to listOf(Screens.Settings.name)
+)
+
+fun isSelected(currentScreen: String?, currentNavItem: String): Boolean {
+    return screenMap[currentNavItem]?.contains(currentScreen) == true
+
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DrawerContent(drawerState: DrawerState){
+fun DrawerContent(drawerState: DrawerState, navController: NavController){
     val items = DataSource.menuOptions
     val scope = rememberCoroutineScope()
-
-    ModalDrawerSheet (Modifier.fillMaxHeight().width(310.dp))  {
+    val currentRoute = navController.currentBackStackEntry?.destination?.route
+    ModalDrawerSheet (
+        Modifier
+            .fillMaxHeight()
+            .width(310.dp))  {
         DrawerHeader()
         Spacer(Modifier.height(12.dp))
         Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
@@ -108,10 +127,14 @@ fun DrawerContent(drawerState: DrawerState){
                     NavigationDrawerItem(
                         icon = { getIcon(title = item.title) },
                         label = { Text(item.title) },
-                        selected = item.title == "Farmer",
+                        selected = isSelected(currentRoute, item.route),
                         colors = colors(selectedContainerColor = lightGreen) ,
                         onClick = {
-                            scope.launch { drawerState.close() }
+                            scope.launch {
+                                drawerState.close()
+                            }
+                            navController.navigate(item.route)
+
                         },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
@@ -176,11 +199,12 @@ fun DrawerHeader() {
 fun NavPreview() {
     FarmConnectTheme {
         val drawerState = rememberDrawerState(DrawerValue.Open)
+        val navController = rememberNavController()
         val scope = rememberCoroutineScope()
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
-                DrawerContent(drawerState)
+                DrawerContent(drawerState, navController = navController)
             }
         ) {}
     }
