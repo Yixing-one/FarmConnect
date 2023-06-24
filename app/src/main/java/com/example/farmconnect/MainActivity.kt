@@ -95,7 +95,9 @@ fun App() {
 
                 NavHost(
                     navController = navController,
-                    startDestination = Screens.Farm.name
+//                    startDestination = Screens.Farm.name
+                    startDestination = Screens.Inventory.name
+
                 ){
 //                  Farm mode:
                     composable(route = Screens.Farm.name){
