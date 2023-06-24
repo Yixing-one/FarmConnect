@@ -99,7 +99,7 @@ fun DrawerContent(drawerState: DrawerState){
     val items = DataSource.menuOptions
     val scope = rememberCoroutineScope()
 
-    ModalDrawerSheet  {
+    ModalDrawerSheet (Modifier.fillMaxHeight().width(310.dp))  {
         DrawerHeader()
         Spacer(Modifier.height(12.dp))
         Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
