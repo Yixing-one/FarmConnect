@@ -32,7 +32,7 @@ import com.example.farmconnect.ui.AppBar
 import com.example.farmconnect.ui.DrawerContent
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import androidx.navigation.compose.rememberNavController
-import com.example.farmconnect.ui.CharityModeScreen
+import com.example.farmconnect.ui.CharityScreen
 import com.example.farmconnect.ui.FarmModeScreen
 import com.example.farmconnect.ui.FinanceStatsScreen
 import com.example.farmconnect.ui.InventoryScreen
@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
             FarmConnectTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                   App()
+                    App()
                 }
             }
         }
@@ -100,7 +100,7 @@ fun App() {
                 ){
 //                  Farm mode:
                     composable(route = Screens.Farm.name){
-                        FarmModeScreen()
+                        FarmModeScreen(navController)
                     }
                     composable(route = Screens.Inventory.name){
                         InventoryScreen()
@@ -113,15 +113,13 @@ fun App() {
                     }
 //                  Charity mode:
                     composable(route = Screens.Charity.name){
-                        CharityModeScreen()
+                        CharityScreen()
                     }
 
 //                    Settings
                     composable(route = Screens.Settings.name){
                         SettingsScreen()
                     }
-
-
                 }
             }
         }

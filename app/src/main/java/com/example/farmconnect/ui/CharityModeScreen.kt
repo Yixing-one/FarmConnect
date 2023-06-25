@@ -1,7 +1,11 @@
 package com.example.farmconnect.ui
 
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.LinearLayout
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,10 +13,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -20,10 +28,13 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -36,6 +47,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 
 
 data class Post(
@@ -59,12 +74,52 @@ data class Post(
 
 private val allPosts = listOf(
     Post(
-        charity_name = "Charity_ONE",
-        charity_location = "University Ave #1, Waterloo, Canada",
-        charity_distance = 5.0,
+        charity_name = "Food for All",
+        charity_location = "123 Maple Street, Toronto, Ontario",
+        charity_distance = 107.0,
         item_name = "Carrots",
-        item_amount = 3.0,
+        item_amount = 2.3,
         imageId = R.drawable.carrot
+    ),
+    Post(
+        charity_name = "NutriHope",
+        charity_location = "654 Spruce Avenue, Edmonton, Alberta",
+        charity_distance =150.0,
+        item_name = "Tomatoes",
+        item_amount = 3.1,
+        imageId = R.drawable.tomatoes
+    ),
+    Post(
+        charity_name = "Feed the Need",
+        charity_location = "456 Elm Lane, Montreal, Quebec",
+        charity_distance = 200.0,
+        item_name = "Corn",
+        item_amount = 0.4,
+        imageId = R.drawable.corn
+    ),
+    Post(
+        charity_name = "Bell Peppers",
+        charity_location = "789 Oak Avenue, Vancouver, British Columbia",
+        charity_distance = 382.0,
+        item_name = "Carrots",
+        item_amount = 39.0,
+        imageId = R.drawable.bell_pepper
+    ),
+    Post(
+        charity_name = "Full Bellies Foundation",
+        charity_location = "789 Oak Avenue, Cityville, Canada",
+        charity_distance = 399.0,
+        item_name = "Potatoes",
+        item_amount = 13.0,
+        imageId = R.drawable.potatoes
+    ),
+    Post(
+        charity_name = "FoodCare Network",
+        charity_location = "123 Maple Street, Anytown, USA",
+        charity_distance = 510.0,
+        item_name = "Onions",
+        item_amount = 7.0,
+        imageId = R.drawable.onions
     ),
 )
 
@@ -98,24 +153,91 @@ class FarmViewModel: ViewModel() {
     }
 }
 @Composable
+//reference from code: https://github.com/Spikeysanju/Wiggles/blob/main/app/src/main/java/dev/spikeysanju/wiggles/component/ItemDogCard.kt
 fun PostCard(post:Post, modifier: Modifier = Modifier){
     Card(
-        modifier = modifier,
+        modifier = Modifier
+            .width(410.dp)
+            .padding(8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = {})
     ) {
-        Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp)
+        ) {
+            val image: Painter = painterResource(id = post.imageId)
             Image(
-                painter = painterResource(id = post.imageId),
-                contentDescription = "image",
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
+                    .size(80.dp, 80.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                painter = image,
+                alignment = Alignment.CenterStart,
+                contentDescription = "",
                 contentScale = ContentScale.Crop
             )
-            Text(
-                text = "${post.charity_name}",
-                modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 10.dp, bottom = 7.dp),
-                style = MaterialTheme.typography.titleMedium,
-            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.align(Alignment.CenterVertically)) {
+                Text(
+                    text = "${post.item_name}  ${post.item_amount} kg",
+                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 0.dp),
+                    style = TextStyle(
+                        fontSize = 21.sp,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "${post.charity_name}",
+                    modifier = Modifier.padding(0.dp, 0.dp, 12.dp, 0.dp),
+                    style = TextStyle(
+                        fontSize = 15.sp,
+                        color = Color.Blue,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "${post.charity_location}",
+                    modifier = Modifier.padding(0.dp, 0.dp, 19.dp, 0.dp),
+                    style = TextStyle(
+                        fontSize = 12.sp,
+                        color = Color.DarkGray,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+
+                Row(verticalAlignment = Alignment.Bottom) {
+
+                    val location: Painter = painterResource(id = R.drawable.ic_location)
+
+                    Icon(
+                        painter = location,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp, 16.dp),
+                        tint = Color.Red
+                    )
+
+                    Text(
+                        text = "${post.charity_distance} km",
+                        modifier = Modifier.padding(8.dp, 3.dp, 5.dp, 0.dp),
+                        style = TextStyle(
+                            fontSize = 15.sp,
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
+
+            }
         }
     }
 }
@@ -143,7 +265,7 @@ fun CharityScreen(){
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 128.dp)){
+        LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)){
             items(CharityPosts.size){item ->
                 PostCard(
                     post = CharityPosts.get(item),
