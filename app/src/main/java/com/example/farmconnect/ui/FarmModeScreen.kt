@@ -129,7 +129,7 @@ fun getFarmerModeIcons(title: String): Painter {
 fun getFarmerModeDescription(title: String): String {
     return when (title) {
         "Finance" -> "Check out your finances"
-        "Marketplace" -> "Sell or buy your items"
+        "Marketplace" -> "Buy or sell items"
         else -> "Check your inventory"
     }
 }
