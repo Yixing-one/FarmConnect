@@ -100,7 +100,7 @@ fun App() {
                 ){
 //                  Farm mode:
                     composable(route = Screens.Farm.name){
-                        FarmModeScreen()
+                        FarmModeScreen(navController)
                     }
                     composable(route = Screens.Inventory.name){
                         InventoryScreen()
