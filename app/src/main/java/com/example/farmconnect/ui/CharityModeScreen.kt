@@ -7,7 +7,9 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -54,8 +56,10 @@ import kotlinx.coroutines.flow.stateIn
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.example.farmconnect.data.allPosts
+import com.example.farmconnect.ui.theme.darkGreen
 
 
 data class Post(
@@ -209,6 +213,24 @@ fun CharityScreen(){
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(darkGreen)
+                .height(100.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Charity Mode",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
         Row{
             TextField(
                 value = searchText,
@@ -224,7 +246,7 @@ fun CharityScreen(){
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
-                .height(700.dp)
+                .height(600.dp)
         ){
             LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)){
                 items(CharityPosts.size){item ->

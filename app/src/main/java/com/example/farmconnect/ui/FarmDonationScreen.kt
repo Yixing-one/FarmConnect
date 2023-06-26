@@ -87,7 +87,7 @@ fun DonationPostCard(post:Post, modifier: Modifier = Modifier){
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            Column(modifier = Modifier.align(Alignment.CenterVertically)) {
+            Column(modifier = Modifier.align(Alignment.CenterVertically).size(200.dp, 120.dp)) {
                 Text(
                     text = "${post.item_name}  ${post.item_amount} kg",
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 0.dp),
@@ -147,10 +147,15 @@ fun DonationPostCard(post:Post, modifier: Modifier = Modifier){
 
             Column() {
                 Button(onClick = {}) {
-                    Image(painterResource(id = R.drawable.donate),
-                        contentDescription ="Make donation",
-                        modifier = Modifier.size(20.dp))
-                    Text(text = "Make Donation",Modifier.padding(start = 10.dp))
+                    Text(
+                        text = "DONATE",
+                        modifier = Modifier.padding(0.dp, 0.dp, 5.dp, 0.dp).size(10.dp, 110.dp),
+                        style = TextStyle(
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    )
                 }
             }
         }

@@ -34,6 +34,7 @@ import com.example.farmconnect.ui.DrawerContent
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import androidx.navigation.compose.rememberNavController
 import com.example.farmconnect.ui.CharityScreen
+import com.example.farmconnect.ui.FarmDonationScreen
 import com.example.farmconnect.ui.FarmModeScreen
 import com.example.farmconnect.ui.FinanceStatsScreen
 import com.example.farmconnect.ui.InventoryScreen
@@ -112,6 +113,9 @@ fun App() {
                     }
                     composable(route = Screens.Marketplace.name){
                         MarketplaceScreen()
+                    }
+                    composable(route = Screens.Donate.name){
+                        FarmDonationScreen()
                     }
 //                  Charity mode:
                     composable(route = Screens.Charity.name){
