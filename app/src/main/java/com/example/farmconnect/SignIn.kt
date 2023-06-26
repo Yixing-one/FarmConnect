@@ -124,11 +124,17 @@ class SignIn : ComponentActivity() {
                             // with your backend.
                             Log.d(TAG, "Got ID token.")
                             val googleCredentials = getCredential(idToken, null)
-                            mFirebaseAuth.signInWithCredential(googleCredentials)
-                            // Start Homepage Activity
-                            startActivity(Intent(this, MainActivity2::class.java))
-                            finish()
-
+                            mFirebaseAuth.signInWithCredential(googleCredentials).addOnCompleteListener(this) { task ->
+                                if (task.isSuccessful) {
+                                    // Sign in success, update UI with the signed-in user's information
+                                    Log.d(TAG, "signInWithCredential:success")
+                                    startActivity(Intent(this, MainActivity2::class.java))
+                                    finish()
+                                } else {
+                                    // If sign in fails, display a message to the user.
+                                    Log.w(TAG, "signInWithCredential:failure", task.exception)
+                                }
+                            }
                         }
 
                         else -> {
