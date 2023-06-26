@@ -248,7 +248,7 @@ fun PostCard(post:Post, modifier: Modifier = Modifier){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CharityScreen(){
+fun CharityModeScreen(){
     val viewModel = viewModel<FarmViewModel>()
     val CharityPosts by viewModel.posts.collectAsState()
     val searchText by viewModel.searchText.collectAsState()
@@ -319,7 +319,7 @@ fun CharityScreen(){
 fun CharityModeScreenPreview() {
     FarmConnectTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            CharityScreen()
+            CharityModeScreen()
         }
     }
 }
