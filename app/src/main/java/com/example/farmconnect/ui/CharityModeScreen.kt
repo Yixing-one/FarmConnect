@@ -1,8 +1,10 @@
 package com.example.farmconnect.ui
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -17,7 +19,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -265,14 +269,48 @@ fun CharityScreen(){
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)){
-            items(CharityPosts.size){item ->
-                PostCard(
-                    post = CharityPosts.get(item),
-                    modifier = Modifier.padding(8.dp)
-                )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .height(700.dp)
+        ){
+            LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)){
+                items(CharityPosts.size){item ->
+                    PostCard(
+                        post = CharityPosts.get(item),
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
             }
         }
+
+        Spacer(modifier = Modifier.height(20.dp))
+        Image(
+            painter = painterResource(id = R.drawable.plus_sign),
+            contentDescription = "image",
+            modifier = Modifier
+                .padding(350.dp, 20.dp)
+                .height(80.dp)
+                .width(85.dp),
+            contentScale = ContentScale.Fit
+        )
+
+
+
+        Row(verticalAlignment = Alignment.Bottom) {
+            Spacer(modifier = Modifier.width(150.dp))
+            Text(
+                text = "Tell us what you need !",
+                modifier = Modifier.padding(8.dp, 3.dp, 5.dp, 0.dp),
+                style = TextStyle(
+                    fontSize = 50.sp,
+                    color = Color.Blue,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
+
     }
 }
 
