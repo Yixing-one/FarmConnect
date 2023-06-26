@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.App
 import com.example.farmconnect.R
 import com.example.farmconnect.Screens
@@ -78,7 +79,6 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
 import kotlinx.coroutines.launch
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -181,6 +181,7 @@ fun DrawerHeader() {
             .background(darkGreen)
             .height(200.dp)
     ){
+        var currentUser = FirebaseAuth.getInstance().currentUser
         Column (
             modifier = Modifier
                 .padding(15.dp)
@@ -197,14 +198,14 @@ fun DrawerHeader() {
                     .size(75.dp)
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.profile_pic),
+                    painter = rememberAsyncImagePainter(currentUser?.photoUrl),
                     contentDescription = "profile image",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .wrapContentSize()
+                        .wrapContentSize().size(80.dp)
                 )
             }
-            Text(text = "Name", color = Color.White)
+            Text(text = currentUser?.displayName.toString(), color = Color.White)
         }
 
     }
