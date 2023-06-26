@@ -1,5 +1,8 @@
 package com.example.farmconnect.ui
 
+import android.app.Activity
+import android.content.ContentValues.TAG
+import android.content.Intent
 import android.graphics.drawable.Icon
 import android.util.Log
 import androidx.compose.foundation.Image
@@ -53,20 +56,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.farmconnect.App
 import com.example.farmconnect.R
 import com.example.farmconnect.Screens
+import com.example.farmconnect.SignIn
 import com.example.farmconnect.data.DataSource
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.example.farmconnect.ui.theme.PurpleGrey40
 import com.example.farmconnect.ui.theme.darkGreen
 import com.example.farmconnect.ui.theme.lightGreen
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 
 import kotlinx.coroutines.launch
 
@@ -140,12 +149,20 @@ fun DrawerContent(drawerState: DrawerState, navController: NavController){
                     )
                 }
             }
+
+            val context = LocalContext.current
+
             Row (modifier = Modifier.weight(1f, false)) {
                 NavigationDrawerItem(
                     icon = { Icon(painter = painterResource(id = R.drawable.baseline_login_24), contentDescription = null ) },
                     label = { Text(text = "Log Out") },
                     selected = false,
                     onClick = {
+                        Firebase.auth.signOut()
+                        context.startActivity(Intent(context, SignIn::class.java))
+                        (context as Activity).finish()
+
+                        Log.d(TAG, FirebaseAuth.getInstance().currentUser.toString())
                     },
                     modifier = Modifier
                         .padding(NavigationDrawerItemDefaults.ItemPadding)
