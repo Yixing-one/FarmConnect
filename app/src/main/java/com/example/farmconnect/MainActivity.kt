@@ -61,6 +61,7 @@ enum class Screens(@StringRes val title: Int) {
     Inventory(title = R.string.inventory),
     Finance(title = R.string.finance),
     Marketplace(title = R.string.marketplace),
+    Donate(title = R.string.Donate),
     //    Charity mode screens:
     Charity(title = R.string.charity),
     Settings(title=R.string.settings)

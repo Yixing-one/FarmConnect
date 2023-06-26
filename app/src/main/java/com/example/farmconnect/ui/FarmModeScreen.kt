@@ -130,6 +130,7 @@ fun getFarmerModeDescription(title: String): String {
     return when (title) {
         "Finance" -> "Check out your finances"
         "Marketplace" -> "Buy or sell items"
+        "Donate" -> "Donate left over items "
         else -> "Check your inventory"
     }
 }
@@ -139,7 +140,7 @@ fun farmModeScreenNav(navController: NavController) {
     val currentRoute = navController.currentBackStackEntry?.destination?.route
 
     val screenMap: HashMap<String, List<String>> = hashMapOf(
-        Screens.Farm.name to listOf(Screens.Finance.name, Screens.Marketplace.name, Screens.Inventory.name),
+        Screens.Farm.name to listOf(Screens.Finance.name, Screens.Marketplace.name, Screens.Inventory.name, Screens.Donate.name),
         Screens.Charity.name to listOf(Screens.Charity.name),
         Screens.Settings.name to listOf(Screens.Settings.name)
     )
