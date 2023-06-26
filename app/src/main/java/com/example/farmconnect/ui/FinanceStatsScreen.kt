@@ -162,45 +162,50 @@ fun FinanceStatsScreen(){
         }
         return total
     }
-    Column(){
-        Row(Modifier.fillMaxWidth()){
-            Card(
-                colors = CardDefaults.cardColors(containerColor = lightGreen),
-                modifier = Modifier
-                    .weight(0.5f)
-                    .padding(end = 10.dp),
 
-            ) {
-                Column(modifier = Modifier
-                    .padding(10.dp)
-                    .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ){
-                    Text(text = "Total Revenue", color = Color.Black)
-                    Text(text = '$' + String.format("%.2f", totalRevenue()), fontSize = 27.sp, fontWeight = FontWeight.Bold, color = Color.Black )
+    Surface(modifier = Modifier
+        .fillMaxSize()
+        .padding(horizontal = 10.dp)
+    ){
+        Column(){
+            Row(Modifier.fillMaxWidth()){
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = lightGreen),
+                    modifier = Modifier
+                        .weight(0.5f)
+                        .padding(end = 10.dp),
+
+                    ) {
+                    Column(modifier = Modifier
+                        .padding(10.dp)
+                        .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ){
+                        Text(text = "Total Revenue", color = Color.Black)
+                        Text(text = '$' + String.format("%.2f", totalRevenue()), fontSize = 27.sp, fontWeight = FontWeight.Bold, color = Color.Black )
+                    }
+                }
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = lightGreen),
+                    modifier = Modifier
+                        .weight(0.5f)
+                        .padding(start = 10.dp)
+                ) {
+                    Column(modifier = Modifier
+                        .padding(10.dp)
+                        .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ){
+                        Text(text = "Total Quantity", color = Color.Black)
+                        Text(text = String.format("%.0f", totalQuantity()) + " lbs", fontSize = 27.sp, fontWeight = FontWeight.Bold, color= Color.Black )
+                    }
                 }
             }
-            Card(
-                colors = CardDefaults.cardColors(containerColor = lightGreen),
-                modifier = Modifier
-                    .weight(0.5f)
-                    .padding(start = 10.dp)
-            ) {
-                Column(modifier = Modifier
-                    .padding(10.dp)
-                    .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ){
-                    Text(text = "Total Quantity", color = Color.Black)
-                    Text(text = String.format("%.0f", totalQuantity()) + " lbs", fontSize = 27.sp, fontWeight = FontWeight.Bold, color= Color.Black )
-                }
-            }
+            DataTable()
         }
-        DataTable()
     }
-
 }
 
 

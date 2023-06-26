@@ -90,7 +90,7 @@ fun App() {
             Surface(modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 20.dp, vertical = 15.dp)
+                .padding(horizontal = 5.dp, vertical = 5.dp)
             ){
 
                 NavHost(
