@@ -119,9 +119,9 @@ fun PanelItemCard(
 @Composable
 fun getFarmerModeIcons(title: String): Painter {
     return when (title) {
-        "Finance" -> painterResource(id = R.drawable.baseline_agriculture_24)
-        "Marketplace" -> painterResource(id = R.drawable.baseline_back_hand_24)
-        else -> painterResource(id = R.drawable.baseline_back_hand_24) // Replace with a default icon if needed
+        "Finance" -> painterResource(id = R.drawable.hand)
+        "Marketplace" -> painterResource(id = R.drawable.marketplace)
+        else -> painterResource(id = R.drawable.checklists) // Replace with a default icon if needed
     }
 }
 
