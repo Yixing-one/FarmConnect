@@ -59,7 +59,6 @@ class SignIn : ComponentActivity() {
     private var mFirebaseAuth = FirebaseAuth.getInstance()
 
     private fun signIn() {
-        Log.e(TAG, "Sign in handler clicked")
         oneTapClient.beginSignIn(signUpRequest)
             .addOnSuccessListener(this) { result ->
                 try {
