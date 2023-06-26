@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -98,11 +99,14 @@ fun PanelItemCard(
                 .fillMaxSize()
         ) {
             Image(
+
                 painter = panelItem.icon, // Use the icon property as the painter
                 contentDescription = "Photo",
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(bottom = 8.dp)
+                    .size(20.dp, 20.dp)
+
             )
 
             Divider(color = Color.Black, thickness = 1.dp, modifier = Modifier.padding(bottom = 8.dp))
@@ -119,9 +123,10 @@ fun PanelItemCard(
 @Composable
 fun getFarmerModeIcons(title: String): Painter {
     return when (title) {
-        "Finance" -> painterResource(id = R.drawable.hand)
-        "Marketplace" -> painterResource(id = R.drawable.marketplace)
-        else -> painterResource(id = R.drawable.checklists) // Replace with a default icon if needed
+        "Finance" -> painterResource(id = R.drawable.baseline_agriculture_24)
+        "Marketplace" -> painterResource(id = R.drawable.baseline_back_hand_24)
+        "Donate" -> painterResource(id = R.drawable.donate)
+        else -> painterResource(id = R.drawable.baseline_back_hand_24) // Replace with a default icon if needed
     }
 }
 
@@ -130,6 +135,7 @@ fun getFarmerModeDescription(title: String): String {
     return when (title) {
         "Finance" -> "Check out your finances"
         "Marketplace" -> "Buy or sell items"
+        "Donate" -> "Donate left over items "
         else -> "Check your inventory"
     }
 }
@@ -139,7 +145,7 @@ fun farmModeScreenNav(navController: NavController) {
     val currentRoute = navController.currentBackStackEntry?.destination?.route
 
     val screenMap: HashMap<String, List<String>> = hashMapOf(
-        Screens.Farm.name to listOf(Screens.Finance.name, Screens.Marketplace.name, Screens.Inventory.name),
+        Screens.Farm.name to listOf(Screens.Finance.name, Screens.Marketplace.name, Screens.Inventory.name, Screens.Donate.name),
         Screens.Charity.name to listOf(Screens.Charity.name),
         Screens.Settings.name to listOf(Screens.Settings.name)
     )

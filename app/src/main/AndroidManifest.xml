@@ -12,17 +12,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FarmConnect"
         tools:targetApi="31" >
-        <receiver
-            android:name=".Donation_post"
-            android:exported="false" >
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/donation_post_info" />
-        </receiver>
 
         <activity
             android:name=".MainActivity2"

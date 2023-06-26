@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.Card
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import com.example.farmconnect.data.allItems
 
 class MainViewModel: ViewModel() {
     private val _searchText = MutableStateFlow("")
@@ -81,68 +83,12 @@ data class Item(
         }
     }
 }
-private val allItems = listOf(
-    Item(
-        name = "Carrots",
-        price = 1.55,
-        quantity = 71,
-        imageId = R.drawable.carrot
-    ),
-    Item(
-        name = "Tomatoes",
-        price = 3.89,
-        quantity = 93,
-        imageId = R.drawable.tomatoes
-    ),
-    Item(
-        name = "Corn",
-        price = 2.29,
-        quantity = 87,
-        imageId = R.drawable.corn
-    ),
-    Item(
-        name = "Bell Peppers",
-        price = 0.99,
-        quantity = 22,
-        imageId = R.drawable.bell_pepper
-    ),
-    Item(
-        name = "Potatoes",
-        price = 1.25,
-        quantity = 103,
-        imageId = R.drawable.potatoes
-    ),
-    Item(
-        name = "Onions",
-        price = 4.23,
-        quantity = 98,
-        imageId = R.drawable.onions
-    ),
-    Item(
-        name = "Iceberg Lettuce",
-        price = 1.46,
-        quantity = 19,
-        imageId = R.drawable.iceberg_lettuce
-    ),
-    Item(
-        name = "Cucumbers",
-        price = 5.89,
-        quantity = 34,
-        imageId = R.drawable.cucumber
-    ),
-    Item(
-        name = "Romaine Lettuce",
-        price = 3.29,
-        quantity = 45,
-        imageId = R.drawable.romaine_lettuce
-    ),
-)
 
 
 @Composable
 fun ItemCard(item: Item, modifier: Modifier = Modifier){
     Card(
-        modifier = modifier,
+        modifier = modifier.width(150.dp).height(230.dp),
     ) {
         Column{
             Image(
