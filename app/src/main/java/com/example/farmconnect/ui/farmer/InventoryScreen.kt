@@ -1,4 +1,4 @@
-package com.example.farmconnect.ui
+package com.example.farmconnect.ui.farmer
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.farmconnect.R
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

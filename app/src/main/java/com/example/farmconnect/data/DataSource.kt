@@ -1,14 +1,6 @@
 package com.example.farmconnect.data
 
-import android.graphics.drawable.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
-import com.example.farmconnect.MainActivity
-import com.example.farmconnect.R
-import com.example.farmconnect.Screens
+import com.example.farmconnect.view.Screens
 
 data class NavItem(
     val title : String,

@@ -1,4 +1,4 @@
-package com.example.farmconnect.ui
+package com.example.farmconnect.ui.farmer
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.farmconnect.R
 import com.example.farmconnect.ui.theme.FarmConnectTheme
-import com.example.farmconnect.data.allItems
 
 @Composable
 fun MarketItemCard(item: Item, modifier: Modifier = Modifier){
