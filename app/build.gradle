@@ -97,4 +97,13 @@ dependencies {
 
     // ViewModel
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version"
+
+
+    //permission handling in compose
+    implementation 'com.google.accompanist:accompanist-permissions:0.24.11-rc'
+
+
+    //for view-model in compose
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.5.0"
+
 }

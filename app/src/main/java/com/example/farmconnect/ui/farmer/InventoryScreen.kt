@@ -1,7 +1,11 @@
 package com.example.farmconnect.ui.farmer
 
+import android.Manifest
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -29,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.farmconnect.R
+import com.example.farmconnect.SpeechRecognizerContract
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,6 +43,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import com.example.farmconnect.data.allItems
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 
 class MainViewModel: ViewModel() {
     private val _searchText = MutableStateFlow("")
@@ -84,13 +94,41 @@ data class Item(
 }
 
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ItemCard(item: Item, modifier: Modifier = Modifier){
+
+    val permissionState = rememberPermissionState(
+        permission = Manifest.permission.RECORD_AUDIO
+        )
+        SideEffect {
+            permissionState.launchPermissionRequest()
+        }
+
+    val speechRecognizerLauncher = rememberLauncherForActivityResult(
+        contract = SpeechRecognizerContract(),
+        onResult = {
+            //make DB call to update inventory for specific item
+            // add toast message to show updated item value
+            Log.d("TAG,", "val is: " + it.toString());
+            //#viewModel.changeTextValue(it.toString())
+        }
+    )
+
+
     Card(
-        modifier = modifier.width(150.dp).height(230.dp),
+        modifier = modifier
+            .width(150.dp)
+            .height(230.dp)
+            .clickable {
+                if (permissionState.status.isGranted) {
+                    speechRecognizerLauncher.launch(Unit)
+                } else
+                    permissionState.launchPermissionRequest()
+            }
     ) {
         Column{
-            Image(
+           Image(
                 painter = painterResource(id = item.imageId),
                 contentDescription = "image",
                 modifier = Modifier
