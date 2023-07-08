@@ -1,10 +1,5 @@
-package com.example.farmconnect.ui
+package com.example.farmconnect.ui.charity
 
-import android.content.Context
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.LinearLayout
-import android.widget.ScrollView
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,9 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -53,7 +46,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -113,7 +105,7 @@ class FarmViewModel: ViewModel() {
 }
 @Composable
 //reference from code: https://github.com/Spikeysanju/Wiggles/blob/main/app/src/main/java/dev/spikeysanju/wiggles/component/ItemDogCard.kt
-fun PostCard(post:Post, modifier: Modifier = Modifier){
+fun PostCard(post: Post, modifier: Modifier = Modifier){
     Card(
         modifier = Modifier
             .width(410.dp)

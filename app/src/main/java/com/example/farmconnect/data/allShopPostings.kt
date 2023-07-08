@@ -1,9 +1,9 @@
 package com.example.farmconnect.data
 
 import com.example.farmconnect.R
-import com.example.farmconnect.ui.farmer.Item
+import com.example.farmconnect.ui.shopping.Item
 
-val allItems = listOf(
+val postedItems = listOf(
     Item(
         name = "Carrots",
         price = 1.55,

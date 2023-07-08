@@ -1,7 +1,7 @@
 package com.example.farmconnect.data
 
 import com.example.farmconnect.R
-import com.example.farmconnect.ui.Post
+import com.example.farmconnect.ui.charity.Post
 
 
  val allPosts = listOf(

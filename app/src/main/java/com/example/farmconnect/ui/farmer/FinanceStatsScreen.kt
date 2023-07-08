@@ -1,6 +1,5 @@
-package com.example.farmconnect.ui
+package com.example.farmconnect.ui.farmer
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
@@ -28,11 +26,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.farmconnect.App
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.example.farmconnect.ui.theme.lightGreen
-import java.time.LocalDate
-import java.util.Date
+
 //credits: https://maneesha-erandi.medium.com/kotlin-with-jetpack-compose-data-tables-c28faf4334d9
 
 data class TableItem(
@@ -109,7 +105,7 @@ fun DataTable(){
                     .fillMaxWidth()
             )
         }
-        itemsIndexed(data) {_ , item ->
+        itemsIndexed(data) { _, item ->
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween

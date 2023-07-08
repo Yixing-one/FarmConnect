@@ -1,11 +1,6 @@
-package com.example.farmconnect.ui
+package com.example.farmconnect.ui.farmer
 
-import android.Manifest
-import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,112 +18,28 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.farmconnect.R
-import com.example.farmconnect.SpeechRecognizerContract
 import com.example.farmconnect.ui.theme.FarmConnectTheme
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
-import com.example.farmconnect.data.allItems
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 
-class MainViewModel: ViewModel() {
-    private val _searchText = MutableStateFlow("")
-    val searchText = _searchText.asStateFlow()
-
-    private val _isSearching = MutableStateFlow(false)
-    val isSearching = _isSearching.asStateFlow()
-
-    private val _items = MutableStateFlow(allItems)
-    val items = searchText
-        .combine(_items){ text, items ->
-            if(text.isBlank()){
-                items
-            }
-            else{
-                items.filter{
-                    it.doesMatchSearchQuery(text)
-                }
-            }
-        }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            _items.value
-        )
-
-    fun onSearchTextChange(text: String){
-        _searchText.value = text
-    }
-
-}
-data class Item(
-    val name: String,
-    val price: Double,
-    val quantity: Int,
-    @DrawableRes val imageId: Int
-) {
-    fun doesMatchSearchQuery(query: String): Boolean {
-        val matchingCombinations = listOf(
-            "$name",
-        )
-        return matchingCombinations.any {
-            it.contains(query, ignoreCase = true)
-        }
-    }
-}
-
-
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun ItemCard(item: Item, modifier: Modifier = Modifier){
-
-    val permissionState = rememberPermissionState(
-        permission = Manifest.permission.RECORD_AUDIO
-        )
-        SideEffect {
-            permissionState.launchPermissionRequest()
-        }
-
-    val speechRecognizerLauncher = rememberLauncherForActivityResult(
-        contract = SpeechRecognizerContract(),
-        onResult = {
-            //make DB call to update inventory for specific item
-            // add toast message to show updated item value
-            Log.d("TAG,", "val is: " + it.toString());
-            //#viewModel.changeTextValue(it.toString())
-        }
-    )
-
-
+fun MarketItemCard(item: Item, modifier: Modifier = Modifier){
     Card(
-        modifier = modifier
-            .width(150.dp)
-            .height(230.dp)
-            .clickable {
-                if (permissionState.status.isGranted) {
-                    speechRecognizerLauncher.launch(Unit)
-                } else
-                    permissionState.launchPermissionRequest()
-            }
+        modifier = modifier.width(350.dp).height(270.dp)
     ) {
         Column{
-           Image(
+            Image(
                 painter = painterResource(id = item.imageId),
                 contentDescription = "image",
                 modifier = Modifier
@@ -151,12 +62,33 @@ fun ItemCard(item: Item, modifier: Modifier = Modifier){
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 0.dp, bottom = 10.dp),
                 style = MaterialTheme.typography.bodySmall,
             )
+            if(item.quantity != 0){
+                Image(
+                    painter = painterResource(R.drawable.plus_sign),
+                    contentDescription = "image",
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(40.dp)
+                        .padding(5.dp, 0.dp),
+                    contentScale = ContentScale.Fit
+                )
+                Text(
+                    text = "Sold 1lb",
+                    modifier = Modifier.padding(start = 0.dp, end = 0.dp, top = 0.dp, bottom = 0.dp),
+                    style = TextStyle(
+                        fontSize = 15.sp,
+                        color = Color.Blue,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InventoryScreen(){
+fun MarketScreen(){
     val viewModel = viewModel<MainViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
@@ -181,21 +113,45 @@ fun InventoryScreen(){
             columns = GridCells.Adaptive(minSize = 128.dp)
         ) {
             items(theFoodItems.size) { item ->
-                ItemCard(
+                MarketItemCard(
                     item = theFoodItems.get(item),
                     modifier = Modifier.padding(8.dp)
                 )
             }
         }
+        Spacer(modifier = Modifier.height(150.dp))
+
+        Row(verticalAlignment = Alignment.Bottom) {
+            Spacer(modifier = Modifier.width(150.dp))
+            Text(
+                text = "Total earning on June 26:",
+                modifier = Modifier.padding(8.dp, 3.dp, 5.dp, 0.dp),
+                style = TextStyle(
+                    fontSize = 30.sp,
+                    color = Color.Blue,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+            Text(
+                text = "   610 CAD",
+                modifier = Modifier.padding(8.dp, 3.dp, 5.dp, 0.dp),
+                style = TextStyle(
+                    fontSize = 40.sp,
+                    color = Color.Cyan,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
     }
+
+
 }
 
-@Preview(showBackground = true)
 @Composable
-fun InventoryScreenPreview() {
+fun MarketplaceScreen(){
     FarmConnectTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            InventoryScreen()
+            MarketScreen()
         }
     }
 }
