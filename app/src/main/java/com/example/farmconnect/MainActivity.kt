@@ -41,22 +41,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-//
-//        var isLoggedIn = mFirebaseAuth.currentUser
-//        Log.d(TAG, mFirebaseAuth.currentUser?.displayName.toString())
-//
-//        if (isLoggedIn == null) {
-//            // show sign in screen
-//            Log.d(TAG, "Sign in screen")
-//            startActivity(Intent(this, SignIn::class.java))
-//            finish()
 
-        //} else {
+        var isLoggedIn = mFirebaseAuth.currentUser
+        Log.d(TAG, mFirebaseAuth.currentUser?.displayName.toString())
+
+        if (isLoggedIn == null) {
+            // show sign in screen
+            Log.d(TAG, "Sign in screen")
+            startActivity(Intent(this, SignIn::class.java))
+            finish()
+
+        } else {
             // show homepage screen
             Log.d(TAG, "HomePage screen")
             startActivity(Intent(this, MainActivity2::class.java))
             finish()
-        //}
+        }
 
     }
 
