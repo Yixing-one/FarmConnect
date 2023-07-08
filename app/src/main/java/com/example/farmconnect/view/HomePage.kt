@@ -22,8 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.example.farmconnect.nevigation.AppBar
-import com.example.farmconnect.nevigation.DrawerContent
+import com.example.farmconnect.navigation.AppBar
+import com.example.farmconnect.navigation.DrawerContent
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import androidx.navigation.compose.rememberNavController
 import com.example.farmconnect.R
@@ -33,6 +33,7 @@ import com.example.farmconnect.ui.farmer.FinanceStatsScreen
 import com.example.farmconnect.ui.farmer.InventoryScreen
 import com.example.farmconnect.ui.farmer.MarketplaceScreen
 import com.example.farmconnect.ui.SettingsScreen
+import com.example.farmconnect.ui.shopping.ShoppingCenterScreen
 import kotlinx.coroutines.launch
 
 class HomePage : ComponentActivity() {
@@ -55,9 +56,12 @@ enum class Screens(@StringRes val title: Int) {
     Inventory(title = R.string.inventory),
     Finance(title = R.string.finance),
     Marketplace(title = R.string.marketplace),
-    Donate(title = R.string.Donate),
+    Donate(title = R.string.donate),
     //    Charity mode screens:
     Charity(title = R.string.charity),
+    //    Ecommerce center screens:
+    Shopping(title= R.string.shopping),
+    //    Settings screen
     Settings(title= R.string.settings)
 }
 
@@ -79,7 +83,10 @@ fun App() {
         }
     ) {
         Scaffold(
-            topBar = { AppBar(onMenuClick = { scope.launch { drawerState.open() }}) }
+            topBar = {
+                val showShoppingCart = currentScreen == Screens.Shopping
+                AppBar(onMenuClick = { scope.launch { drawerState.open() } }, showShoppingCart)
+            }
         ) {
                 paddingValues ->
 
@@ -111,7 +118,10 @@ fun App() {
                     composable(route = Screens.Charity.name){
                         CharityModeScreen()
                     }
-
+//                  E-commerce center:
+                    composable(route = Screens.Shopping.name){
+                        ShoppingCenterScreen()
+                    }
 //                    Settings
                     composable(route = Screens.Settings.name){
                         SettingsScreen()

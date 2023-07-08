@@ -16,6 +16,10 @@ object DataSource {
             title = "Charity",
             route = Screens.Charity.name,
         ),
+        NavItem (
+            title="Shopping Center",
+            route = Screens.Shopping.name,
+        ),
         NavItem(
             title = "Settings",
             route = Screens.Settings.name,
