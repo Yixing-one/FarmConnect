@@ -91,7 +91,7 @@ data class Item(
 @Composable
 fun ItemCard(item: Item, modifier: Modifier = Modifier){
     Card(
-        modifier = modifier.width(150.dp).height(230.dp),
+        modifier = modifier.width(150.dp).height(260.dp)
     ) {
         Column{
             Image(
@@ -119,11 +119,10 @@ fun ItemCard(item: Item, modifier: Modifier = Modifier){
             )
             Button(
                 onClick = {},
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(7.5.dp)
             ) {
-                Text(text = "Add to Cart")
+                Text(text = "Add to Cart", style = MaterialTheme.typography.bodySmall)
             }
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
