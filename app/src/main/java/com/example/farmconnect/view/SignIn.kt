@@ -1,6 +1,5 @@
-package com.example.farmconnect
+package com.example.farmconnect.view
 
-import android.content.ContentValues
 import android.content.ContentValues.TAG
 import android.content.Intent
 import android.content.IntentSender
@@ -8,11 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.indication
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,9 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -35,10 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.farmconnect.R
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.Identity
@@ -124,11 +117,17 @@ class SignIn : ComponentActivity() {
                             // with your backend.
                             Log.d(TAG, "Got ID token.")
                             val googleCredentials = getCredential(idToken, null)
-                            mFirebaseAuth.signInWithCredential(googleCredentials)
-                            // Start Homepage Activity
-                            startActivity(Intent(this, MainActivity2::class.java))
-                            finish()
-
+                            mFirebaseAuth.signInWithCredential(googleCredentials).addOnCompleteListener(this) { task ->
+                                if (task.isSuccessful) {
+                                    // Sign in success, update UI with the signed-in user's information
+                                    Log.d(TAG, "signInWithCredential:success")
+                                    startActivity(Intent(this, HomePage::class.java))
+                                    finish()
+                                } else {
+                                    // If sign in fails, display a message to the user.
+                                    Log.w(TAG, "signInWithCredential:failure", task.exception)
+                                }
+                            }
                         }
 
                         else -> {
