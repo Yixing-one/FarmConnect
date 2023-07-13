@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -144,9 +145,7 @@ fun CartItem(item: Item, quantity:Int, cartViewModel: CartViewModel){
     }
 }
 
-
-@Composable
-fun CartScreen(cartViewModel: CartViewModel){
+fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
     val allItems = cartViewModel.items
     val items = cartViewModel.items.toSet().toList()
     fun getTotal(): String {
@@ -157,6 +156,23 @@ fun CartScreen(cartViewModel: CartViewModel){
         }
         return String.format("%.2f", total)
     }
+    items(1){
+        Spacer(modifier = Modifier.height(10.dp))
+        Divider()
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(text = "Total", style = MaterialTheme.typography.titleLarge)
+            Text(text = "$ ${getTotal()}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        }
+        Spacer(modifier = Modifier.height(30.dp))
+    }
+}
+
+@Composable
+fun CartScreen(cartViewModel: CartViewModel){
+    val allItems = cartViewModel.items
+    val items = cartViewModel.items.toSet().toList()
 
     Surface(modifier = Modifier
         .fillMaxSize()
@@ -167,7 +183,9 @@ fun CartScreen(cartViewModel: CartViewModel){
             Spacer(modifier = Modifier.height(10.dp))
             if (items.isEmpty()){
                 Card(
-                    Modifier.fillMaxWidth().height(100.dp)) {
+                    Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -182,19 +200,10 @@ fun CartScreen(cartViewModel: CartViewModel){
                         CartItem(item = items[item], quantity = allItems.count { it == items[item]}, cartViewModel)
 
                     }
+                    CartTotal(cartViewModel = cartViewModel)
                 }
 
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Divider()
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = "Total", style = MaterialTheme.typography.titleLarge)
-                Text(text = "$ ${getTotal()}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            }
-
-
         }
     }
 }
