@@ -89,7 +89,7 @@ data class Item(
 
 
 @Composable
-fun ItemCard(item: Item, modifier: Modifier = Modifier){
+fun ItemCard(item: Item, modifier: Modifier = Modifier, cartViewModel: CartViewModel){
     Card(
         modifier = modifier.width(150.dp).height(260.dp)
     ) {
@@ -118,7 +118,7 @@ fun ItemCard(item: Item, modifier: Modifier = Modifier){
                 style = MaterialTheme.typography.bodySmall,
             )
             Button(
-                onClick = {},
+                onClick = { cartViewModel.addToCart(item) },
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(7.5.dp)
             ) {
                 Text(text = "Add to Cart", style = MaterialTheme.typography.bodySmall)
@@ -128,7 +128,7 @@ fun ItemCard(item: Item, modifier: Modifier = Modifier){
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShoppingCenterScreen(){
+fun ShoppingCenterScreen(cartViewModel: CartViewModel){
     val viewModel = viewModel<MainViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
@@ -155,7 +155,8 @@ fun ShoppingCenterScreen(){
             items(theFoodItems.size) { item ->
                 ItemCard(
                     item = theFoodItems.get(item),
-                    modifier = Modifier.padding(8.dp)
+                    modifier = Modifier.padding(8.dp),
+                    cartViewModel = cartViewModel
                 )
             }
         }
@@ -165,9 +166,10 @@ fun ShoppingCenterScreen(){
 @Preview(showBackground = true)
 @Composable
 fun ShoppingCenterScreenPreview() {
+    val cartViewModel = viewModel<CartViewModel>();
     FarmConnectTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            ShoppingCenterScreen()
+            ShoppingCenterScreen(cartViewModel)
         }
     }
 }
