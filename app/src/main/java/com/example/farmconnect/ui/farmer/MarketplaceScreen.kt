@@ -39,14 +39,14 @@ fun MarketItemCard(item: Item, modifier: Modifier = Modifier){
         modifier = modifier.width(350.dp).height(270.dp)
     ) {
         Column{
-            Image(
-                painter = painterResource(id = item.imageId),
-                contentDescription = "image",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                contentScale = ContentScale.Crop
-            )
+//            Image(
+//                painter = painterResource(id = item.imageId),
+//                contentDescription = "image",
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(120.dp),
+//                contentScale = ContentScale.Crop
+//            )
             Text(
                 text = "$${item.price}",
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 10.dp, bottom = 7.dp),

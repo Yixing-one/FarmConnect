@@ -1,11 +1,14 @@
 package com.example.farmconnect.ui.farmer
 
 import android.Manifest
+import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -26,62 +30,101 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.farmconnect.R
+import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.SpeechRecognizerContract
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
-import com.example.farmconnect.data.allItems
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
-class MainViewModel: ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val db = Firebase.firestore
+    private val storage = Firebase.storage
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
+
     private val _searchText = MutableStateFlow("")
-    val searchText = _searchText.asStateFlow()
+    val searchText: StateFlow<String> = _searchText.asStateFlow()
 
     private val _isSearching = MutableStateFlow(false)
-    val isSearching = _isSearching.asStateFlow()
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
-    private val _items = MutableStateFlow(allItems)
-    val items = searchText
-        .combine(_items){ text, items ->
-            if(text.isBlank()){
-                items
-            }
-            else{
-                items.filter{
-                    it.doesMatchSearchQuery(text)
-                }
-            }
+    private val _items = MutableStateFlow<List<Item>>(listOf())
+    val items: StateFlow<List<Item>> = _items.asStateFlow()
+
+    val isLoading = MutableStateFlow(true)
+
+
+    init {
+        viewModelScope.launch {
+            loadItems()
         }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            _items.value
-        )
+    }
+
+    private suspend fun loadItems() {
+        isLoading.emit(true) // Start loading
+        try {
+            val documents = db.collection("inventory")
+                .whereEqualTo("userId", currentUserId)
+                .get()
+                .await()
+
+            val invItems = ArrayList<Item>()
+
+            for (document in documents) {
+                val docData = document.data
+                val storageRef = storage.reference
+                val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+
+                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
+                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+                invItems.add(
+                    Item(
+                        name = docData.getValue("name").toString(),
+                        price = docData.getValue("price").toString().toDouble(),
+                        quantity = docData.getValue("quantity").toString().toInt(),
+                        imageBitmap = imageBitmap
+                    )
+                )
+            }
+
+            _items.emit(invItems.toList())
+        } catch (exception: Exception) {
+            isLoading.emit(false)
+        } finally {
+            isLoading.emit(false)
+        }
+    }
 
     fun onSearchTextChange(text: String){
         _searchText.value = text
     }
-
 }
+
 data class Item(
     val name: String,
     val price: Double,
     val quantity: Int,
-    @DrawableRes val imageId: Int
+    val imageBitmap: Bitmap
 ) {
     fun doesMatchSearchQuery(query: String): Boolean {
         val matchingCombinations = listOf(
@@ -98,12 +141,10 @@ data class Item(
 @Composable
 fun ItemCard(item: Item, modifier: Modifier = Modifier){
 
-    val permissionState = rememberPermissionState(
-        permission = Manifest.permission.RECORD_AUDIO
-        )
-        SideEffect {
-            permissionState.launchPermissionRequest()
-        }
+    val permissionState = rememberPermissionState(permission = Manifest.permission.RECORD_AUDIO)
+    SideEffect {
+        permissionState.launchPermissionRequest()
+    }
 
     val speechRecognizerLauncher = rememberLauncherForActivityResult(
         contract = SpeechRecognizerContract(),
@@ -129,7 +170,7 @@ fun ItemCard(item: Item, modifier: Modifier = Modifier){
     ) {
         Column{
            Image(
-                painter = painterResource(id = item.imageId),
+                painter = rememberAsyncImagePainter(model = item.imageBitmap),
                 contentDescription = "image",
                 modifier = Modifier
                     .fillMaxWidth()
@@ -160,33 +201,47 @@ fun InventoryScreen(){
     val viewModel = viewModel<MainViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ){
-        Row{
-            TextField(
-                value = searchText,
-                onValueChange = viewModel::onSearchTextChange,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {Text(text = "Search")},
-            )
-        }
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator() // Show loading indicator
+            }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 128.dp)
-        ) {
-            items(theFoodItems.size) { item ->
-                ItemCard(
-                    item = theFoodItems.get(item),
-                    modifier = Modifier.padding(8.dp)
+        } else {
+            Row{
+                TextField(
+                    value = searchText,
+                    onValueChange = viewModel::onSearchTextChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {Text(text = "Search")},
                 )
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 128.dp)
+            ) {
+                items(theFoodItems.size) { item ->
+                    ItemCard(
+                        item = theFoodItems.get(item),
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
         }
+
     }
 }
 
