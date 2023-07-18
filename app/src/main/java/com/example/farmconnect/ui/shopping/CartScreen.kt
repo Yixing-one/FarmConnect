@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
@@ -166,6 +167,12 @@ fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
             Text(text = "$ ${getTotal()}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(30.dp))
+
+            Button(onClick = { /*TODO*/ } , modifier = Modifier.fillMaxWidth()) {
+                Text(text = "Checkout", style = MaterialTheme.typography.titleLarge)
+
+        }
+
     }
 }
 

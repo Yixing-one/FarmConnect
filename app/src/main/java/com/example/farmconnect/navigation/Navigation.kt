@@ -24,12 +24,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
@@ -59,6 +61,7 @@ import com.example.farmconnect.R
 import com.example.farmconnect.view.Screens
 import com.example.farmconnect.view.SignIn
 import com.example.farmconnect.data.DataSource
+import com.example.farmconnect.ui.shopping.CartViewModel
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.example.farmconnect.ui.theme.darkGreen
 import com.example.farmconnect.ui.theme.lightGreen
@@ -74,8 +77,10 @@ fun AppBar(
     onMenuClick: () -> Unit,
     showShoppingCart: Boolean, // Add a boolean parameter
     showCloseIcon: Boolean,
-    navController: NavController
+    navController: NavController,
+    cartViewModel: CartViewModel
 ) {
+    val item_count = cartViewModel.items.toSet().size;
     TopAppBar(
         title = { },
         navigationIcon = {
@@ -90,15 +95,14 @@ fun AppBar(
         },
         actions = {
             if (showShoppingCart) { // Check the boolean value
-                IconButton(
-                    onClick = { navController.navigate(Screens.Cart.name) },
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Menu, // Update the icon
-                        contentDescription = "Shopping Cart"
-                    )
+                Button(onClick = { navController.navigate(Screens.Cart.name) }, Modifier.padding(end = 23.dp, top = 2.dp) ) {
+                    Text(text = "$item_count", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.size(10.dp))
+                    Icon(painter = painterResource(id = R.drawable.baseline_shopping_cart_24), contentDescription = "Shopping Cart" )
+
+
                 }
+
             }
             if (showCloseIcon) {
                 IconButton(
@@ -222,7 +226,8 @@ fun DrawerHeader() {
                     contentDescription = "profile image",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .wrapContentSize().size(80.dp)
+                        .wrapContentSize()
+                        .size(80.dp)
                 )
             }
             Text(text = currentUser?.displayName.toString(), color = Color.White)

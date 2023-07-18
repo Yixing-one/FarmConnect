@@ -281,7 +281,7 @@ fun App() {
             topBar = {
                 val showShoppingCart = currentScreen == Screens.Shopping
                 val showCloseIcon = currentScreen == Screens.Cart
-                AppBar(onMenuClick = { scope.launch { drawerState.open() } }, showShoppingCart, showCloseIcon, navController)
+                AppBar(onMenuClick = { scope.launch { drawerState.open() } }, showShoppingCart, showCloseIcon, navController, cartViewModel)
             },
             floatingActionButton = { ExtendedFABComponent()},
             floatingActionButtonPosition = FabPosition.End
