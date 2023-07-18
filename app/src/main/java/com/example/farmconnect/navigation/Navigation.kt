@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
@@ -71,7 +72,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun AppBar(
     onMenuClick: () -> Unit,
-    showShoppingCart: Boolean // Add a boolean parameter
+    showShoppingCart: Boolean, // Add a boolean parameter
+    showCloseIcon: Boolean,
+    navController: NavController
 ) {
     TopAppBar(
         title = { },
@@ -88,12 +91,23 @@ fun AppBar(
         actions = {
             if (showShoppingCart) { // Check the boolean value
                 IconButton(
-                    onClick = {},
+                    onClick = { navController.navigate(Screens.Cart.name) },
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Menu, // Update the icon
                         contentDescription = "Shopping Cart"
+                    )
+                }
+            }
+            if (showCloseIcon) {
+                IconButton(
+                    onClick = { navController.navigateUp() },
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Close Cart"
                     )
                 }
             }
