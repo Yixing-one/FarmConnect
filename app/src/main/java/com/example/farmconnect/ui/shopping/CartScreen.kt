@@ -2,7 +2,6 @@ package com.example.farmconnect.ui.shopping
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
@@ -29,8 +27,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,11 +39,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.R
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 
 @Composable
-fun CartItem(item: Item, quantity:Int, cartViewModel: CartViewModel){
+fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -59,7 +56,7 @@ fun CartItem(item: Item, quantity:Int, cartViewModel: CartViewModel){
                 .fillMaxWidth()
                 .padding(10.dp)
         ){
-            val image: Painter = painterResource(id = item.imageId)
+            val image: Painter = rememberAsyncImagePainter(model = item.imageBitmap)
             Image(
                 modifier = Modifier
                     .size(80.dp, 80.dp)
@@ -92,7 +89,7 @@ fun CartItem(item: Item, quantity:Int, cartViewModel: CartViewModel){
                         )
                     }
                 }
-                Text(text = "${item.quantity} lbs", style = MaterialTheme.typography.titleMedium)
+                Text(text = "${item.quantityRemaining} lbs", style = MaterialTheme.typography.titleMedium)
                 Row( Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     Row {
