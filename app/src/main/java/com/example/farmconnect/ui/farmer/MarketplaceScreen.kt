@@ -1,5 +1,7 @@
 package com.example.farmconnect.ui.farmer
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,24 +31,139 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.R
 import com.example.farmconnect.ui.theme.FarmConnectTheme
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+
+class MarketPlaceViewModel: ViewModel() {
+    private val db = Firebase.firestore
+    private val storage = Firebase.storage
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
+
+    private val _searchText = MutableStateFlow("")
+    val searchText: StateFlow<String> = _searchText.asStateFlow()
+
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    private val _items = MutableStateFlow<List<MarketPlaceItem>>(listOf())
+    val items: StateFlow<List<MarketPlaceItem>> = searchText
+        .combine(_items) { text, items ->
+            if (text.isBlank()) {
+                items
+            } else {
+                items.filter {
+                    it.doesMatchSearchQuery(text)
+                }
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(),
+            initialValue = _items.value
+        )
+
+
+    val isLoading = MutableStateFlow(true)
+
+
+    init {
+        viewModelScope.launch {
+            loadItems()
+        }
+    }
+
+    private suspend fun loadItems() {
+        isLoading.emit(true) // Start loading
+        try {
+            val documents = db.collection("marketplace")
+                .whereEqualTo("userId", currentUserId)
+                .get()
+                .await()
+
+            val marketItems = ArrayList<MarketPlaceItem>()
+
+            for (document in documents) {
+                val docData = document.data
+                val storageRef = storage.reference
+                val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+
+                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
+                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+                marketItems.add(
+                    MarketPlaceItem(
+                        name = docData.getValue("name").toString(),
+                        price = docData.getValue("price").toString().toDouble(),
+                        quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
+                        quantitySold = docData.getValue("quantitySold").toString().toInt(),
+                        imageBitmap = imageBitmap
+                    )
+                )
+            }
+
+            _items.emit(marketItems.toList())
+
+        } catch (exception: Exception) {
+            isLoading.emit(false)
+        } finally {
+            isLoading.emit(false)
+        }
+    }
+
+    fun onSearchTextChange(text: String){
+        _searchText.value = text
+    }
+}
+
+data class MarketPlaceItem(
+    val name: String,
+    val price: Double,
+    val quantityRemaining: Int,
+    val quantitySold: Int,
+    val imageBitmap: Bitmap
+) {
+    fun doesMatchSearchQuery(query: String): Boolean {
+        val matchingCombinations = listOf(
+            "$name",
+        )
+        return matchingCombinations.any {
+            it.contains(query, ignoreCase = true)
+        }
+    }
+}
 
 @Composable
-fun MarketItemCard(item: Item, modifier: Modifier = Modifier){
+fun MarketItemCard(item: MarketPlaceItem, modifier: Modifier = Modifier){
     Card(
         modifier = modifier.width(350.dp).height(270.dp)
     ) {
         Column{
-//            Image(
-//                painter = painterResource(id = item.imageId),
-//                contentDescription = "image",
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .height(120.dp),
-//                contentScale = ContentScale.Crop
-//            )
+            Image(
+                painter = rememberAsyncImagePainter(model = item.imageBitmap),
+                contentDescription = "image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentScale = ContentScale.Crop
+            )
             Text(
                 text = "$${item.price}",
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 10.dp, bottom = 7.dp),
@@ -58,11 +175,11 @@ fun MarketItemCard(item: Item, modifier: Modifier = Modifier){
                 style = MaterialTheme.typography.titleSmall,
             )
             Text(
-                text = "${item.quantity} lb",
+                text = "${item.quantityRemaining} lb",
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 0.dp, bottom = 10.dp),
                 style = MaterialTheme.typography.bodySmall,
             )
-            if(item.quantity != 0){
+            if(item.quantitySold != 0){
                 Image(
                     painter = painterResource(R.drawable.plus_sign),
                     contentDescription = "image",
@@ -73,7 +190,7 @@ fun MarketItemCard(item: Item, modifier: Modifier = Modifier){
                     contentScale = ContentScale.Fit
                 )
                 Text(
-                    text = "Sold 1lb",
+                    text = "Sold ${item.quantitySold} lb",
                     modifier = Modifier.padding(start = 0.dp, end = 0.dp, top = 0.dp, bottom = 0.dp),
                     style = TextStyle(
                         fontSize = 15.sp,
@@ -89,7 +206,7 @@ fun MarketItemCard(item: Item, modifier: Modifier = Modifier){
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MarketScreen(){
-    val viewModel = viewModel<MainViewModel>()
+    val viewModel = viewModel<MarketPlaceViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
 

@@ -114,7 +114,8 @@ class MainViewModel: ViewModel() {
                         name = docData.getValue("name").toString(),
                         price = docData.getValue("price").toString().toDouble(),
                         quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
-                        imageBitmap = imageBitmap
+                        imageBitmap = imageBitmap,
+                        userId = docData.getValue("userId").toString()
                     )
                 )
             }
@@ -137,7 +138,8 @@ data class MarketplaceItem(
     val name: String,
     val price: Double,
     val quantityRemaining: Int,
-    val imageBitmap: Bitmap
+    val imageBitmap: Bitmap,
+    val userId: String
 ) {
     fun doesMatchSearchQuery(query: String): Boolean {
         val matchingCombinations = listOf(
