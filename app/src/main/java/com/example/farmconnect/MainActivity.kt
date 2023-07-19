@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
         var isLoggedIn = mFirebaseAuth.currentUser
         Log.d(TAG, mFirebaseAuth.currentUser?.displayName.toString())
 
+        /*
         if (isLoggedIn == null) {
             // show sign in screen
             Log.d(TAG, "Sign in screen")
@@ -56,7 +57,10 @@ class MainActivity : ComponentActivity() {
             Log.d(TAG, "HomePage screen")
             startActivity(Intent(this, HomePage::class.java))
             finish()
-        }
+        }*/
+        Log.d(TAG, "HomePage screen")
+        startActivity(Intent(this, HomePage::class.java))
+        finish()
     }
 }
 

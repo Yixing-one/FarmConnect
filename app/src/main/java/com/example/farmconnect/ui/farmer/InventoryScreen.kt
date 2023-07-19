@@ -69,7 +69,7 @@ import java.io.IOException
 import androidx.compose.material3.TextField
 
 
-class MainViewModel(application: Application, context: Context) : AndroidViewModel(application) {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     //private val db = Firebase.firestore
     //private val storage = Firebase.storage
@@ -99,8 +99,10 @@ class MainViewModel(application: Application, context: Context) : AndroidViewMod
         )
 
     val isLoading = MutableStateFlow(true)
+    var invItems = ArrayList<Item>()
 
-    init {
+    fun startViewModel(context: Context) {
+        println("startViewModel")
         viewModelScope.launch {
             //loadItems()
             loadItems_local_cache(context)
@@ -120,11 +122,18 @@ class MainViewModel(application: Application, context: Context) : AndroidViewMod
         return jsonArray
     }
 
-    private fun loadItems_local_cache(context: Context) {
-        val invItems = ArrayList<Item>()
+    private suspend fun loadItems_local_cache(context: Context) {
+        println("loadItems_local_cache")
+        // Read the JSON data from the fill
+        val jsonArray = readJsonDataFromAssets(context, "inventory_items.json")
 
-        // Read the JSON data from the fil
-        val jsonArray = readJsonDataFromAssets(context, "local_cache_json/inventory_items.json")
+        //debug
+        if (jsonArray != null) {
+            for (i in 0 until jsonArray.length()) {
+                val element = jsonArray.get(i)
+                println(element)
+            }
+        }
 
         if (jsonArray != null) {
             for (i in 0 until jsonArray.length()) {
@@ -144,6 +153,13 @@ class MainViewModel(application: Application, context: Context) : AndroidViewMod
                 )
             }
         }
+        _items.emit(invItems.toList())
+        println(_items)
+        println("loadItems_local_cache ends")
+    }
+
+    fun onSearchTextChange(text: String){
+        _searchText.value = text
     }
 
     /*
@@ -184,10 +200,6 @@ class MainViewModel(application: Application, context: Context) : AndroidViewMod
             isLoading.emit(false)
         }
     }*/
-
-    fun onSearchTextChange(text: String){
-        _searchText.value = text
-    }
 }
 
 data class Item(
@@ -269,8 +281,10 @@ fun ItemCard(item: Item, modifier: Modifier = Modifier){
 fun InventoryScreen(){
     val context = LocalContext.current // Access the Context using LocalContext.current
     val viewModel = viewModel<MainViewModel>()
+    viewModel.startViewModel(context)
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
+    println(theFoodItems)
     val isLoading by viewModel.isLoading.collectAsState()
 
     Column(
@@ -304,6 +318,7 @@ fun InventoryScreen(){
                 columns = GridCells.Adaptive(minSize = 128.dp)
             ) {
                 items(theFoodItems.size) { item ->
+                    println(item)
                     ItemCard(
                         item = theFoodItems.get(item),
                         modifier = Modifier.padding(8.dp)
