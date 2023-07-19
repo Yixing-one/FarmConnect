@@ -47,6 +47,17 @@ import com.example.farmconnect.ui.theme.FarmConnectTheme
 
 @Composable
 fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
+    fun isEnabled(): Boolean {
+        val grouped = cartViewModel.items.groupBy { it.id }
+        if(!grouped.containsKey(item.id)){
+            return true;
+        }
+        val addedQuantity = grouped[item.id]?.size
+        if (addedQuantity != null) {
+            return addedQuantity <= item.quantityRemaining - 1
+        }
+        return true;
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -91,7 +102,7 @@ fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
                         )
                     }
                 }
-                Text(text = "${item.quantityRemaining} lbs", style = MaterialTheme.typography.titleMedium)
+                Text(text = "${item.quantityRemaining} lbs available", style = MaterialTheme.typography.titleMedium)
                 Row( Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     Row {
@@ -115,13 +126,14 @@ fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
                                     )
                             )
                         }
-                        Text(text = "$quantity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 5.dp, end = 5.dp))
+                        Text(text = "$quantity lb", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 5.dp, end = 5.dp))
                         IconButton(onClick = { cartViewModel.addToCart(item) },
                             Modifier
                                 .clip(RoundedCornerShape(10.dp))
                                 .padding(0.dp)
                                 .size(24.dp)
-                                .background(color = Color.White)
+                                .background(color = Color.White),
+                            enabled = isEnabled()
                         )
                         {
                             Icon(

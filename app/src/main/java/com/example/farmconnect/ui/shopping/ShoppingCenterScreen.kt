@@ -156,6 +156,18 @@ data class MarketplaceItem(
 
 @Composable
 fun ItemCard(item: MarketplaceItem, modifier: Modifier = Modifier, cartViewModel: CartViewModel){
+    fun isEnabled(): Boolean {
+        val grouped = cartViewModel.items.groupBy { it.id }
+        if(!grouped.containsKey(item.id)){
+            return true;
+        }
+        val addedQuantity = grouped[item.id]?.size
+        if (addedQuantity != null) {
+            return addedQuantity <= item.quantityRemaining - 1
+        }
+        return true;
+    }
+
     Card(
         modifier = modifier.width(150.dp).height(260.dp)
     ) {
@@ -169,7 +181,7 @@ fun ItemCard(item: MarketplaceItem, modifier: Modifier = Modifier, cartViewModel
                 contentScale = ContentScale.Crop
             )
             Text(
-                text = "$${item.price}",
+                text = "$${item.price}/lb",
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 10.dp, bottom = 7.dp),
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -179,12 +191,13 @@ fun ItemCard(item: MarketplaceItem, modifier: Modifier = Modifier, cartViewModel
                 style = MaterialTheme.typography.titleSmall,
             )
             Text(
-                text = "${item.quantityRemaining} lb",
+                text = "${item.quantityRemaining} lb available",
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 0.dp, bottom = 10.dp),
                 style = MaterialTheme.typography.bodySmall,
             )
             Button(
                 onClick = { cartViewModel.addToCart(item) },
+                enabled = isEnabled(),
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(7.5.dp)
             ) {
                 Text(text = "Add to Cart", style = MaterialTheme.typography.bodySmall)
