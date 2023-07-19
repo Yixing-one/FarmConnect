@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -25,7 +26,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -46,22 +46,34 @@ import kotlinx.coroutines.flow.asStateFlow
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.android.gms.common.util.JsonUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import io.grpc.internal.JsonUtil
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.security.AccessController.getContext
+import com.example.farmconnect.R
+import org.json.JSONArray
+import org.json.JSONException
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import java.io.IOException
+import androidx.compose.material3.TextField
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val db = Firebase.firestore
-    private val storage = Firebase.storage
-    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
+class MainViewModel(application: Application, context: Context) : AndroidViewModel(application) {
+
+    //private val db = Firebase.firestore
+    //private val storage = Firebase.storage
+    //private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
 
     private val _searchText = MutableStateFlow("")
     val searchText: StateFlow<String> = _searchText.asStateFlow()
@@ -86,16 +98,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             initialValue = _items.value
         )
 
-
     val isLoading = MutableStateFlow(true)
-
 
     init {
         viewModelScope.launch {
-            loadItems()
+            //loadItems()
+            loadItems_local_cache(context)
         }
     }
 
+    private fun readJsonDataFromAssets(context: Context, fileName: String): JSONArray? {
+        var jsonArray: JSONArray? = null
+        try {
+            val jsonString = context.assets.open(fileName).bufferedReader().use { it.readText() }
+            jsonArray = JSONArray(jsonString)
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } catch (e: JSONException) {
+            e.printStackTrace()
+        }
+        return jsonArray
+    }
+
+    private fun loadItems_local_cache(context: Context) {
+        val invItems = ArrayList<Item>()
+
+        // Read the JSON data from the fil
+        val jsonArray = readJsonDataFromAssets(context, "local_cache_json/inventory_items.json")
+
+        if (jsonArray != null) {
+            for (i in 0 until jsonArray.length()) {
+                val itemJsonObject = jsonArray.getJSONObject(i)
+                val item_name = itemJsonObject.getString("name")
+                val item_price = itemJsonObject.getString("price")
+                val item_quantity = itemJsonObject.getString("quantity")
+                val item_image = R.drawable.carrot
+
+                invItems.add(
+                    Item(
+                        name = item_name,
+                        price = item_price.toDouble(),
+                        quantity = item_quantity.toInt(),
+                        imageId = item_image
+                    )
+                )
+            }
+        }
+    }
+
+    /*
     private suspend fun loadItems() {
         isLoading.emit(true) // Start loading
         try {
@@ -120,7 +171,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         name = docData.getValue("name").toString(),
                         price = docData.getValue("price").toString().toDouble(),
                         quantity = docData.getValue("quantity").toString().toInt(),
-                        imageBitmap = imageBitmap
+                        xd = imageBitmap
                     )
                 )
             }
@@ -132,7 +183,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } finally {
             isLoading.emit(false)
         }
-    }
+    }*/
 
     fun onSearchTextChange(text: String){
         _searchText.value = text
@@ -143,7 +194,7 @@ data class Item(
     val name: String,
     val price: Double,
     val quantity: Int,
-    val imageBitmap: Bitmap
+    @DrawableRes val imageId: Int
 ) {
     fun doesMatchSearchQuery(query: String): Boolean {
         val matchingCombinations = listOf(
@@ -175,7 +226,6 @@ fun ItemCard(item: Item, modifier: Modifier = Modifier){
         }
     )
 
-
     Card(
         modifier = modifier
             .width(150.dp)
@@ -189,7 +239,7 @@ fun ItemCard(item: Item, modifier: Modifier = Modifier){
     ) {
         Column{
            Image(
-                painter = rememberAsyncImagePainter(model = item.imageBitmap),
+                painter = painterResource(id = item.imageId),
                 contentDescription = "image",
                 modifier = Modifier
                     .fillMaxWidth()
@@ -217,6 +267,7 @@ fun ItemCard(item: Item, modifier: Modifier = Modifier){
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventoryScreen(){
+    val context = LocalContext.current // Access the Context using LocalContext.current
     val viewModel = viewModel<MainViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
@@ -243,7 +294,7 @@ fun InventoryScreen(){
                     value = searchText,
                     onValueChange = viewModel::onSearchTextChange,
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = {Text(text = "Search")},
+                    placeholder = {Text(text = "Search") },
                 )
             }
 

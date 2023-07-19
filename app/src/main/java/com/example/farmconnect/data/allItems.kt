@@ -13,7 +13,7 @@ val allItems = listOf(
         name = "Carrots",
         price = 1.55,
         quantity = 71,
-        imageBitmap = Bitmap.createBitmap(Picture())
+        imageId = R.drawable.carrot
     )
 )
 
