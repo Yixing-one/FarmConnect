@@ -135,11 +135,11 @@ private fun ExtendedFABComponent() {
         val storage = Firebase.storage
         val storageRef = storage.reference
         val imagesRef = storageRef.child("images/crops")
-        val fileName = "image_${System.currentTimeMillis()}.jpg"
+        val fileName = "image_${System.currentTimeMillis()}.png"
         val imageRef = imagesRef.child(fileName)
 
         val baos = ByteArrayOutputStream()
-        imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
+        imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
         val imageData = baos.toByteArray()
 
         val uploadTask = imageRef.putBytes(imageData)
@@ -283,7 +283,11 @@ fun App() {
                 val showCloseIcon = currentScreen == Screens.Cart
                 AppBar(onMenuClick = { scope.launch { drawerState.open() } }, showShoppingCart, showCloseIcon, navController, cartViewModel)
             },
-            floatingActionButton = { ExtendedFABComponent()},
+            floatingActionButton = {
+                if (currentScreen == Screens.Farm) {  // Check the current screen
+                    ExtendedFABComponent()
+                }
+            },
             floatingActionButtonPosition = FabPosition.End
         ) {
                 paddingValues ->

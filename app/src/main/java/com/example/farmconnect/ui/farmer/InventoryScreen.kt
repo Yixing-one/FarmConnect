@@ -50,7 +50,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -67,7 +70,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
     private val _items = MutableStateFlow<List<Item>>(listOf())
-    val items: StateFlow<List<Item>> = _items.asStateFlow()
+    val items: StateFlow<List<Item>> = searchText
+        .combine(_items) { text, items ->
+            if (text.isBlank()) {
+                items
+            } else {
+                items.filter {
+                    it.doesMatchSearchQuery(text)
+                }
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(),
+            initialValue = _items.value
+        )
+
 
     val isLoading = MutableStateFlow(true)
 
@@ -108,6 +126,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             _items.emit(invItems.toList())
+
         } catch (exception: Exception) {
             isLoading.emit(false)
         } finally {
