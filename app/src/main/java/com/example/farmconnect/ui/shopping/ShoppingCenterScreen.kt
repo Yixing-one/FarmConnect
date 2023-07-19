@@ -111,6 +111,7 @@ class MainViewModel: ViewModel() {
 
                 marketItems.add(
                     MarketplaceItem(
+                        id = document.id.toString(),
                         name = docData.getValue("name").toString(),
                         price = docData.getValue("price").toString().toDouble(),
                         quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
@@ -134,6 +135,7 @@ class MainViewModel: ViewModel() {
 
 }
 data class MarketplaceItem(
+    val id: String,
     val name: String,
     val price: Double,
     val quantityRemaining: Int,

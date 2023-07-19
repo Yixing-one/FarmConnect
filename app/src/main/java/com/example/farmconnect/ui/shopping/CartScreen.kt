@@ -1,5 +1,6 @@
 package com.example.farmconnect.ui.shopping
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -144,13 +145,12 @@ fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
 }
 
 fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
-    val allItems = cartViewModel.items
-    val items = cartViewModel.items.toSet().toList()
+    val groupedItems = cartViewModel.items.groupBy { it.id }
     fun getTotal(): String {
         var total : Double = 0.0;
-        items.forEach { item ->
-            val quantity = allItems.count {it == item}
-            total += item.price * quantity;
+        groupedItems.forEach { entry ->
+            val quantity = entry.value.size;
+            total += entry.value.first().price * quantity;
         }
         return String.format("%.2f", total)
     }
@@ -175,8 +175,12 @@ fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
 
 @Composable
 fun CartScreen(cartViewModel: CartViewModel){
-    val allItems = cartViewModel.items
-    val items = cartViewModel.items.toSet().toList()
+    val grouped = cartViewModel.items.groupBy { it.id }
+    val cartItems = mutableListOf<MarketplaceItem>();
+    grouped.forEach { entry ->
+        cartItems.add(entry.value.first());
+        print("${entry.key} : ${entry.value}")
+    }
 
     Surface(modifier = Modifier
         .fillMaxSize()
@@ -185,7 +189,7 @@ fun CartScreen(cartViewModel: CartViewModel){
         Column {
             Text("Your cart", style = MaterialTheme.typography.titleLarge,)
             Spacer(modifier = Modifier.height(10.dp))
-            if (items.isEmpty()){
+            if (grouped.isEmpty()){
                 Card(
                     Modifier
                         .fillMaxWidth()
@@ -200,8 +204,8 @@ fun CartScreen(cartViewModel: CartViewModel){
                 
             } else {
                 LazyColumn {
-                    items(items.size) { item ->
-                        CartItem(item = items[item], quantity = allItems.count { it == items[item]}, cartViewModel)
+                    items(cartItems.size) { item ->
+                        grouped[cartItems[item].id]?.let { CartItem(item = cartItems[item], quantity = it.size, cartViewModel) }
 
                     }
                     CartTotal(cartViewModel = cartViewModel)

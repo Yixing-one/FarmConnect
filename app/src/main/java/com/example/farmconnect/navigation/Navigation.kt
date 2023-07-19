@@ -80,7 +80,7 @@ fun AppBar(
     navController: NavController,
     cartViewModel: CartViewModel
 ) {
-    val item_count = cartViewModel.items.toSet().size;
+    val item_count = cartViewModel.items.size;
     TopAppBar(
         title = { },
         navigationIcon = {
