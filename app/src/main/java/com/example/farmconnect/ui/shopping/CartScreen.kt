@@ -40,10 +40,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.R
 import com.example.farmconnect.ui.theme.FarmConnectTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
@@ -156,7 +158,13 @@ fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
     }
 }
 
+fun callCheckout(cartViewModel: CartViewModel){
+    cartViewModel.viewModelScope.launch {
+        cartViewModel.checkOut()
+    }
+}
 fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
+
     val groupedItems = cartViewModel.items.groupBy { it.id }
     fun getTotal(): String {
         var total : Double = 0.0;
@@ -177,7 +185,7 @@ fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
         }
         Spacer(modifier = Modifier.height(30.dp))
 
-            Button(onClick = { /*TODO*/ } , modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { callCheckout(cartViewModel) } , modifier = Modifier.fillMaxWidth()) {
                 Text(text = "Checkout", style = MaterialTheme.typography.titleLarge)
 
         }
