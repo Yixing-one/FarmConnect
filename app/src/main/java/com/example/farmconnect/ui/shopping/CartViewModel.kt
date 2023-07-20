@@ -8,23 +8,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class CartViewModel: ViewModel() {
-    private val _items = mutableStateListOf<Item>()
+    private val _items = mutableStateListOf<MarketplaceItem>()
     private val _map = mutableMapOf<Int, Int>()
-    val items : List<Item> = _items
+    val items : List<MarketplaceItem> = _items
 
     private var total = MutableStateFlow(0)
     val count = total.asStateFlow()
 
 
-    fun addToCart(item: Item){
+    fun addToCart(item: MarketplaceItem){
         _items.add(item);
     }
 
-    fun decrementFromCart(item: Item){
+    fun decrementFromCart(item: MarketplaceItem){
         _items.remove(item)
     }
 
-    fun deleteFromCart(item: Item){
+    fun deleteFromCart(item: MarketplaceItem){
         _items.removeAll { it == item }
     }
 }

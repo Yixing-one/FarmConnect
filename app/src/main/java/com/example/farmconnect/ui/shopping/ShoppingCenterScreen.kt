@@ -1,7 +1,12 @@
 package com.example.farmconnect.ui.shopping
 
+import android.content.ContentValues.TAG
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,51 +37,109 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import com.example.farmconnect.data.postedItems
-
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 
 class MainViewModel: ViewModel() {
+    private val db = Firebase.firestore
+    private val storage = Firebase.storage
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
+
     private val _searchText = MutableStateFlow("")
-    val searchText = _searchText.asStateFlow()
+    val searchText: StateFlow<String> = _searchText.asStateFlow()
 
     private val _isSearching = MutableStateFlow(false)
-    val isSearching = _isSearching.asStateFlow()
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
-    private val _items = MutableStateFlow(postedItems)
-    val items = searchText
-        .combine(_items){ text, items ->
-            if(text.isBlank()){
+    private val _items = MutableStateFlow<List<MarketplaceItem>>(listOf())
+    val items: StateFlow<List<MarketplaceItem>> = searchText
+        .combine(_items) { text, items ->
+            if (text.isBlank()) {
                 items
-            }
-            else{
-                items.filter{
+            } else {
+                items.filter {
                     it.doesMatchSearchQuery(text)
                 }
             }
         }
         .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            _items.value
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(),
+            initialValue = _items.value
         )
+
+
+    val isLoading = MutableStateFlow(true)
+
+
+    init {
+        viewModelScope.launch {
+            loadItems()
+        }
+    }
+
+    private suspend fun loadItems() {
+        isLoading.emit(true) // Start loading
+        try {
+            val documents = db.collection("marketplace")
+                .get()
+                .await()
+
+            val marketItems = ArrayList<MarketplaceItem>()
+
+            for (document in documents) {
+                val docData = document.data
+                val storageRef = storage.reference
+                val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+
+                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
+                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+                marketItems.add(
+                    MarketplaceItem(
+                        name = docData.getValue("name").toString(),
+                        price = docData.getValue("price").toString().toDouble(),
+                        quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
+                        imageBitmap = imageBitmap,
+                        userId = docData.getValue("userId").toString()
+                    )
+                )
+            }
+
+            _items.emit(marketItems.toList())
+
+        } catch (exception: Exception) {
+            isLoading.emit(false)
+        } finally {
+            isLoading.emit(false)
+        }
+    }
 
     fun onSearchTextChange(text: String){
         _searchText.value = text
     }
 
 }
-data class Item(
+data class MarketplaceItem(
     val name: String,
     val price: Double,
-    val quantity: Int,
-    @DrawableRes val imageId: Int
+    val quantityRemaining: Int,
+    val imageBitmap: Bitmap,
+    val userId: String
 ) {
     fun doesMatchSearchQuery(query: String): Boolean {
         val matchingCombinations = listOf(
@@ -89,13 +153,13 @@ data class Item(
 
 
 @Composable
-fun ItemCard(item: Item, modifier: Modifier = Modifier, cartViewModel: CartViewModel){
+fun ItemCard(item: MarketplaceItem, modifier: Modifier = Modifier, cartViewModel: CartViewModel){
     Card(
         modifier = modifier.width(150.dp).height(260.dp)
     ) {
         Column{
             Image(
-                painter = painterResource(id = item.imageId),
+                painter = rememberAsyncImagePainter(model = item.imageBitmap),
                 contentDescription = "image",
                 modifier = Modifier
                     .fillMaxWidth()
@@ -113,7 +177,7 @@ fun ItemCard(item: Item, modifier: Modifier = Modifier, cartViewModel: CartViewM
                 style = MaterialTheme.typography.titleSmall,
             )
             Text(
-                text = "${item.quantity} lb",
+                text = "${item.quantityRemaining} lb",
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 0.dp, bottom = 10.dp),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -132,32 +196,45 @@ fun ShoppingCenterScreen(cartViewModel: CartViewModel){
     val viewModel = viewModel<MainViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ){
-        Row{
-            TextField(
-                value = searchText,
-                onValueChange = viewModel::onSearchTextChange,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {Text(text = "Search")},
-            )
-        }
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator() // Show loading indicator
+            }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 128.dp)
-        ) {
-            items(theFoodItems.size) { item ->
-                ItemCard(
-                    item = theFoodItems.get(item),
-                    modifier = Modifier.padding(8.dp),
-                    cartViewModel = cartViewModel
+        } else {
+            Row{
+                TextField(
+                    value = searchText,
+                    onValueChange = viewModel::onSearchTextChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {Text(text = "Search")},
                 )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 128.dp)
+            ) {
+                items(theFoodItems.size) { item ->
+                    ItemCard(
+                        item = theFoodItems.get(item),
+                        modifier = Modifier.padding(8.dp),
+                        cartViewModel = cartViewModel
+                    )
+                }
             }
         }
     }
