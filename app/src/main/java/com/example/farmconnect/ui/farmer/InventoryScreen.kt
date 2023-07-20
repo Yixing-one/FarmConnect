@@ -2,6 +2,7 @@ package com.example.farmconnect.ui.farmer
 
 import android.Manifest
 import android.app.Application
+import android.content.ContentValues.TAG
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
@@ -47,6 +48,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
@@ -93,7 +95,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val storageRef = storage.reference
                 val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
 
-                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
+                val TEN_MEGABYTE: Long = 1024 * 1024 * 10
                 val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
                 val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
@@ -115,142 +117,190 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onSearchTextChange(text: String){
+    fun onSearchTextChange(text: String) {
         _searchText.value = text
     }
-}
-
-data class Item(
-    val name: String,
-    val price: Double,
-    val quantity: Int,
-    val imageBitmap: Bitmap
-) {
-    fun doesMatchSearchQuery(query: String): Boolean {
-        val matchingCombinations = listOf(
-            "$name",
-        )
-        return matchingCombinations.any {
-            it.contains(query, ignoreCase = true)
-        }
-    }
-}
 
 
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun ItemCard(item: Item, modifier: Modifier = Modifier){
-
-    val permissionState = rememberPermissionState(permission = Manifest.permission.RECORD_AUDIO)
-    SideEffect {
-        permissionState.launchPermissionRequest()
-    }
-
-    val speechRecognizerLauncher = rememberLauncherForActivityResult(
-        contract = SpeechRecognizerContract(),
-        onResult = {
-            //make DB call to update inventory for specific item
-            // add toast message to show updated item value
-            Log.d("TAG,", "val is: " + it.toString());
-            //#viewModel.changeTextValue(it.toString())
-        }
-    )
-
-
-    Card(
-        modifier = modifier
-            .width(150.dp)
-            .height(230.dp)
-            .clickable {
-                if (permissionState.status.isGranted) {
-                    speechRecognizerLauncher.launch(Unit)
-                } else
-                    permissionState.launchPermissionRequest()
-            }
+    data class Item(
+        val name: String,
+        val price: Double,
+        val quantity: Int,
+        val imageBitmap: Bitmap
     ) {
-        Column{
-           Image(
-                painter = rememberAsyncImagePainter(model = item.imageBitmap),
-                contentDescription = "image",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                contentScale = ContentScale.Crop
+        fun doesMatchSearchQuery(query: String): Boolean {
+            val matchingCombinations = listOf(
+                "$name",
             )
-            Text(
-                text = "$${item.price}",
-                modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 10.dp, bottom = 7.dp),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = "${item.name}",
-                modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Text(
-                text = "${item.quantity} lb",
-                modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 0.dp, bottom = 10.dp),
-                style = MaterialTheme.typography.bodySmall,
-            )
+            return matchingCombinations.any {
+                it.contains(query, ignoreCase = true)
+            }
         }
     }
-}
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun InventoryScreen(){
-    val viewModel = viewModel<MainViewModel>()
-    val searchText by viewModel.searchText.collectAsState()
-    val theFoodItems by viewModel.items.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ){
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator() // Show loading indicator
-            }
 
-        } else {
-            Row{
-                TextField(
-                    value = searchText,
-                    onValueChange = viewModel::onSearchTextChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = {Text(text = "Search")},
-                )
-            }
+    @OptIn(ExperimentalPermissionsApi::class)
+    @Composable
 
-            Spacer(modifier = Modifier.height(10.dp))
+    fun ItemCard(item: Item, modifier: Modifier = Modifier) {
+        val permissionState = rememberPermissionState(permission = Manifest.permission.RECORD_AUDIO)
+        fun updateInventory(itemName: String, increment: Int) {
+            viewModelScope.launch {
+                // Query Firestore to find the document that contains the item and belongs to the current user
+                val querySnapshot = db.collection("inventory")
+                    .whereEqualTo("userID", currentUserId)
+                    .whereEqualTo("name", itemName)
+                    .get()
+                    .await()
+                Log.d(TAG, "Increment Value: $increment")
+                // Check if a document was found
+                if (!querySnapshot.isEmpty) {
+                    // Get the first document from the results (there should be only one document that matches the query)
+                    val doc = querySnapshot.documents[0]
 
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 128.dp)
-            ) {
-                items(theFoodItems.size) { item ->
-                    ItemCard(
-                        item = theFoodItems.get(item),
-                        modifier = Modifier.padding(8.dp)
+                    // Update the quantity of the item
+                    doc.reference.update(
+                        "items.$itemName",
+                        FieldValue.increment(increment.toLong())
                     )
+                } else {
+                    Log.d("TAG,", "No document found for item: $itemName")
                 }
             }
         }
 
-    }
-}
 
-@Preview(showBackground = true)
-@Composable
-fun InventoryScreenPreview() {
-    FarmConnectTheme {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            InventoryScreen()
+        SideEffect {
+            permissionState.launchPermissionRequest()
+        }
+
+        val speechRecognizerLauncher = rememberLauncherForActivityResult(
+            contract = SpeechRecognizerContract(),
+            onResult = { result ->
+                val spokenText = result?.get(0)
+                val increment = spokenText?.toInt()
+                if (increment != null) {
+                    updateInventory(itemName = item.name, increment = increment)
+                };
+            }
+
+        )
+
+
+
+        Card(
+            modifier = modifier
+                .width(150.dp)
+                .height(230.dp)
+                .clickable {
+                    if (permissionState.status.isGranted) {
+                        speechRecognizerLauncher.launch(Unit)
+                    } else
+                        permissionState.launchPermissionRequest()
+                }
+        ) {
+            Column {
+                Image(
+                    painter = rememberAsyncImagePainter(model = item.imageBitmap),
+                    contentDescription = "image",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentScale = ContentScale.Crop
+                )
+                Text(
+                    text = "$${item.price}",
+                    modifier = Modifier.padding(
+                        start = 13.dp,
+                        end = 10.dp,
+                        top = 10.dp,
+                        bottom = 7.dp
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = "${item.name}",
+                    modifier = Modifier.padding(
+                        start = 13.dp,
+                        end = 10.dp,
+                        top = 3.dp,
+                        bottom = 3.dp
+                    ),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = "${item.quantity} lb",
+                    modifier = Modifier.padding(
+                        start = 13.dp,
+                        end = 10.dp,
+                        top = 0.dp,
+                        bottom = 10.dp
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
-}
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun InventoryScreen() {
+        val viewModel = viewModel<MainViewModel>()
+        val searchText by viewModel.searchText.collectAsState()
+        val theFoodItems by viewModel.items.collectAsState()
+        val isLoading by viewModel.isLoading.collectAsState()
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator() // Show loading indicator
+                }
+
+            } else {
+                Row {
+                    TextField(
+                        value = searchText,
+                        onValueChange = viewModel::onSearchTextChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text(text = "Search") },
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 128.dp)
+                ) {
+                    items(theFoodItems.size) { item ->
+                        ItemCard(
+                            item = theFoodItems.get(item),
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                }
+            }
+
+        }
+    }
+
+    @Preview(showBackground = true)
+    @Composable
+    fun InventoryScreenPreview() {
+        FarmConnectTheme {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                InventoryScreen()
+            }
+        }
+    }
