@@ -1,11 +1,13 @@
 package com.example.farmconnect.view
 
+import android.Manifest
 import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -41,6 +43,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +57,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -61,7 +66,9 @@ import com.example.farmconnect.navigation.AppBar
 import com.example.farmconnect.navigation.DrawerContent
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import androidx.navigation.compose.rememberNavController
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.example.farmconnect.R
+import com.example.farmconnect.SpeechRecognizerContract
 import com.example.farmconnect.ui.charity.CharityModeScreen
 import com.example.farmconnect.ui.farmer.FarmModeScreen
 import com.example.farmconnect.ui.farmer.FinanceStatsScreen
@@ -73,12 +80,16 @@ import com.example.farmconnect.ui.shopping.CartScreen
 import com.example.farmconnect.ui.shopping.CartViewModel
 import com.example.farmconnect.ui.shopping.ShoppingCenterScreen
 import com.example.farmconnect.ui.theme.lightGreen
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
+import android.app.Activity
 
 class HomePage : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,7 +130,6 @@ private fun ExtendedFABComponent() {
     val itemQuantity = remember { mutableStateOf("") }
     val itemPrice = remember { mutableStateOf("") }
 
-
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -129,6 +139,20 @@ private fun ExtendedFABComponent() {
             capturedImage.value = imageBitmap
         }
     }
+    val activity = LocalContext.current as Activity
+    /*
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { result ->
+        if (result) {
+            // Picture was taken successfully
+            // Do something with the picture, e.g., save it or display it
+            // Get the captured image file from the result data
+            val imageFile = result.data?.data ?: return@rememberLauncherForActivityResult
+            val imageBitmap = result.data?.extras?.get("data") as? Bitmap
+            showDialog.value = true
+            capturedImage.value = imageBitmap
+        }
+    }*/
+
 
     fun addItemToFirestore(imageBitmap: Bitmap) {
         // add captured image to Firestore Storage
@@ -232,8 +256,9 @@ private fun ExtendedFABComponent() {
     }
 
     val context = LocalContext.current
+
     FloatingActionButton(
-        onClick = { takePicture(context, cameraLauncher) },
+        onClick = { takePicture(activity, context, cameraLauncher) },
         content = {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
                 .padding(horizontal = 10.dp)
@@ -250,15 +275,21 @@ private fun ExtendedFABComponent() {
     )
 }
 
-private fun takePicture(context: Context, cameraLauncher: ActivityResultLauncher<Intent>) {
+
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalGlideComposeApi::class)
+private fun takePicture(activity: Activity, context: Context, cameraLauncher: ActivityResultLauncher<Intent>) {
+    //cameraLauncher.launch(null)
     val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+    activity.startActivityForResult(cameraIntent, 1)
+    /*
     if (cameraIntent.resolveActivity(context.packageManager) != null) {
         cameraLauncher.launch(cameraIntent)
-    }
+    }*/
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun App() {
     val navController = rememberNavController()
@@ -270,6 +301,22 @@ fun App() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val cartViewModel = viewModel<CartViewModel>();
+
+    //ask the permission for camera app
+    val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
+    SideEffect {
+        cameraPermissionState.launchPermissionRequest()
+    }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { result ->
+        if (result) {
+            Log.d("TAG,", "camera works ");
+            // Picture was taken successfully
+            // Do something with the picture
+        } else {
+            // Picture capture was canceled or failed
+            // Handle the failure or cancellation
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
