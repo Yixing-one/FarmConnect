@@ -3,6 +3,7 @@ package com.example.farmconnect.ui.farmer
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,9 +37,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.R
 import com.example.farmconnect.ui.theme.FarmConnectTheme
+import com.example.farmconnect.ui.theme.darkGreen
+import com.example.farmconnect.view.Screens
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
@@ -110,6 +117,7 @@ class MarketPlaceViewModel: ViewModel() {
 
                 marketItems.add(
                     MarketPlaceItem(
+                        documentId = document.id,
                         name = docData.getValue("name").toString(),
                         price = docData.getValue("price").toString().toDouble(),
                         quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
@@ -134,6 +142,7 @@ class MarketPlaceViewModel: ViewModel() {
 }
 
 data class MarketPlaceItem(
+    val documentId: String,
     val name: String,
     val price: Double,
     val quantityRemaining: Int,
@@ -153,7 +162,9 @@ data class MarketPlaceItem(
 @Composable
 fun MarketItemCard(item: MarketPlaceItem, modifier: Modifier = Modifier){
     Card(
-        modifier = modifier.width(350.dp).height(270.dp)
+        modifier = modifier
+            .width(350.dp)
+            .height(270.dp)
     ) {
         Column{
             Image(
@@ -205,7 +216,7 @@ fun MarketItemCard(item: MarketPlaceItem, modifier: Modifier = Modifier){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MarketScreen(){
+fun MarketScreen(navController: NavController){
     val viewModel = viewModel<MarketPlaceViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
@@ -226,6 +237,32 @@ fun MarketScreen(){
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        Row {
+            Button(
+                onClick = { navController.navigate(Screens.EditMarketplace.name) },
+                colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                Text(text = "Edit Postings")
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Button(
+                onClick = { navController.navigate(Screens.AddPostingMarketplace.name) },
+                colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                Text(text = "Add Postings")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 128.dp)
         ) {
@@ -239,25 +276,46 @@ fun MarketScreen(){
         Spacer(modifier = Modifier.height(150.dp))
 
         Row(verticalAlignment = Alignment.Bottom) {
-            Spacer(modifier = Modifier.width(150.dp))
-            Text(
-                text = "Total earning on June 26:",
-                modifier = Modifier.padding(8.dp, 3.dp, 5.dp, 0.dp),
-                style = TextStyle(
-                    fontSize = 30.sp,
-                    color = Color.Blue,
-                    fontWeight = FontWeight.Bold
-                )
-            )
-            Text(
-                text = "   610 CAD",
-                modifier = Modifier.padding(8.dp, 3.dp, 5.dp, 0.dp),
-                style = TextStyle(
-                    fontSize = 40.sp,
-                    color = Color.Cyan,
-                    fontWeight = FontWeight.Bold
-                )
-            )
+//            Spacer(modifier = Modifier.width(150.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    // Your other content here...
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // The two Text elements in the Column
+                    Text(
+                        text = "Total earning on June 26:",
+                        style = TextStyle(
+                            fontSize = 20.sp,
+                            color = Color.Blue,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp, 3.dp, 5.dp, 0.dp),
+                    )
+
+                    Text(
+                        text = "   610 CAD",
+                        style = TextStyle(
+                            fontSize = 20.sp,
+                            color = Color.Cyan,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp, 3.dp, 5.dp, 0.dp),
+                    )
+                }
+            }
         }
     }
 
@@ -266,9 +324,10 @@ fun MarketScreen(){
 
 @Composable
 fun MarketplaceScreen(){
+    val navController = rememberNavController()
     FarmConnectTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            MarketScreen()
+            MarketScreen(navController)
         }
     }
 }

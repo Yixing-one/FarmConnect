@@ -90,6 +90,10 @@ import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import android.app.Activity
+import com.example.farmconnect.ui.farmer.AddPostingsMarketScreen
+import com.example.farmconnect.ui.farmer.EditMarketScreen
+import com.example.farmconnect.ui.farmer.EditMarketplaceScreen
+import com.example.farmconnect.ui.farmer.MarketScreen
 
 class HomePage : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -111,6 +115,8 @@ enum class Screens(@StringRes val title: Int) {
     Inventory(title = R.string.inventory),
     Finance(title = R.string.finance),
     Marketplace(title = R.string.marketplace),
+    EditMarketplace(title = R.string.edit_marketplace),
+    AddPostingMarketplace(title=R.string.add_marketplace),
     Donate(title = R.string.donate),
     //    Charity mode screens:
     Charity(title = R.string.charity),
@@ -361,7 +367,13 @@ fun App() {
                             FinanceStatsScreen()
                         }
                         composable(route = Screens.Marketplace.name){
-                            MarketplaceScreen()
+                            MarketScreen(navController)
+                        }
+                        composable(route = Screens.EditMarketplace.name){
+                            EditMarketScreen(navController)
+                        }
+                        composable(route = Screens.AddPostingMarketplace.name) {
+                            AddPostingsMarketScreen(navController)
                         }
 //                  Charity mode:
                         composable(route = Screens.Charity.name){
