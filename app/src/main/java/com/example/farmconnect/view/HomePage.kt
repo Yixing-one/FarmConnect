@@ -325,7 +325,7 @@ fun App() {
                             ShoppingCenterScreen(cartViewModel)
                         }
                         composable(route = Screens.Cart.name){
-                            CartScreen(cartViewModel)
+                            CartScreen(cartViewModel, navController)
                         }
 //                    Settings
                         composable(route = Screens.Settings.name){

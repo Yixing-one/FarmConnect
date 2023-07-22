@@ -1,6 +1,7 @@
 package com.example.farmconnect.ui.shopping
 
-import android.util.Log
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,9 +43,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.R
 import com.example.farmconnect.ui.theme.FarmConnectTheme
+import com.example.farmconnect.view.Screens
 import kotlinx.coroutines.launch
 
 @Composable
@@ -158,12 +162,19 @@ fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
     }
 }
 
-fun callCheckout(cartViewModel: CartViewModel){
+fun callCheckout(cartViewModel: CartViewModel, navController: NavController, context: Context){
     cartViewModel.viewModelScope.launch {
         cartViewModel.checkOut()
+        navController.navigate(Screens.Shopping.name)
+        Toast.makeText(context,"Successfully checked out", Toast.LENGTH_SHORT).show()
+
     }
 }
-fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
+fun LazyListScope.CartTotal(
+    cartViewModel: CartViewModel,
+    navController: NavController,
+    context: Context
+){
 
     val groupedItems = cartViewModel.items.groupBy { it.id }
     fun getTotal(): String {
@@ -185,7 +196,7 @@ fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
         }
         Spacer(modifier = Modifier.height(30.dp))
 
-            Button(onClick = { callCheckout(cartViewModel) } , modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { callCheckout(cartViewModel, navController, context) } , modifier = Modifier.fillMaxWidth()) {
                 Text(text = "Checkout", style = MaterialTheme.typography.titleLarge)
 
         }
@@ -194,9 +205,10 @@ fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
 }
 
 @Composable
-fun CartScreen(cartViewModel: CartViewModel){
+fun CartScreen(cartViewModel: CartViewModel, navController: NavController){
     val grouped = cartViewModel.items.groupBy { it.id }
     val cartItems = mutableListOf<MarketplaceItem>();
+    val context = LocalContext.current;
     grouped.forEach { entry ->
         cartItems.add(entry.value.first());
         print("${entry.key} : ${entry.value}")
@@ -228,7 +240,7 @@ fun CartScreen(cartViewModel: CartViewModel){
                         grouped[cartItems[item].id]?.let { CartItem(item = cartItems[item], quantity = it.size, cartViewModel) }
 
                     }
-                    CartTotal(cartViewModel = cartViewModel)
+                    CartTotal(cartViewModel = cartViewModel, navController, context)
                 }
 
             }
@@ -240,9 +252,10 @@ fun CartScreen(cartViewModel: CartViewModel){
 @Composable
 fun CartScreenPreview(){
     val cartViewModel = viewModel<CartViewModel>();
+    val navController = rememberNavController()
     FarmConnectTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            CartScreen(cartViewModel)
+            CartScreen(cartViewModel, navController = navController )
         }
     }
 }
