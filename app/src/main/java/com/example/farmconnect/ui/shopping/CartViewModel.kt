@@ -38,7 +38,7 @@ class CartViewModel: ViewModel() {
 
         val db = Firebase.firestore
         val financeColRef = db.collection("finance");
-
+        val marketplaceColRef = db.collection("marketplace")
         grouped.forEach { entry ->
             val item = entry.value.first()
             val quantity = entry.value.size
@@ -63,6 +63,19 @@ class CartViewModel: ViewModel() {
                 financeColRef.document(id).update("items", FieldValue.arrayUnion(data));
 
             }
+
+            //update marketplace fields
+            val id = marketplaceColRef.whereEqualTo("userId", item.userId).whereEqualTo("name", item.name).get().await().documents.first().id;
+            if(id != null){
+                val docData = marketplaceColRef.document(id).get().await().data;
+                var quantRemaining = docData?.getValue("quantityRemaining").toString().toInt() ;
+                var quantSold = docData?.getValue("quantitySold").toString().toInt() ;
+                quantRemaining -= quantity;
+                quantSold += quantity;
+                marketplaceColRef.document(id).update("quantityRemaining", quantRemaining).await();
+                marketplaceColRef.document(id).update("quantitySold", quantSold).await();
+            }
+
 
         }
 

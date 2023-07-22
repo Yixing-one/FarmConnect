@@ -1,7 +1,6 @@
 package com.example.farmconnect.ui.farmer
 
 import android.content.ContentValues.TAG
-import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,20 +33,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.farmconnect.ui.shopping.MarketplaceItem
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.example.farmconnect.ui.theme.lightGreen
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
@@ -78,7 +71,7 @@ class FinanceViewModel: ViewModel() {
         for (item in financeItems) {
             val item = TableItem(
                 name = item["name"].toString(),
-                quantitySold = item["quantitySold"] as? Double ?: 0.0,
+                quantitySold = (item["quantitySold"] as Long).toDouble(),
                 dateSold = item["dateSold"] as? Timestamp ?: Timestamp.now(),
                 revenue = item["revenue"] as? Double ?: 0.0
             )

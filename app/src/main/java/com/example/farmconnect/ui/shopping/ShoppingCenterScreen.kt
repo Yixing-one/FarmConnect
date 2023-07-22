@@ -109,21 +109,25 @@ class MainViewModel: ViewModel() {
                 val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
                 val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
-                marketItems.add(
-                    MarketplaceItem(
-                        id = document.id.toString(),
-                        name = docData.getValue("name").toString(),
-                        price = docData.getValue("price").toString().toDouble(),
-                        quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
-                        imageBitmap = imageBitmap,
-                        userId = docData.getValue("userId").toString()
+                if(docData.getValue("quantityRemaining").toString().toInt() > 0){
+                    marketItems.add(
+                        MarketplaceItem(
+                            id = document.id.toString(),
+                            name = docData.getValue("name").toString(),
+                            price = docData.getValue("price").toString().toDouble(),
+                            quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
+                            imageBitmap = imageBitmap,
+                            userId = docData.getValue("userId").toString()
+                        )
                     )
-                )
+                }
+
             }
 
             _items.emit(marketItems.toList())
 
         } catch (exception: Exception) {
+            Log.d("error", exception.message.toString())
             isLoading.emit(false)
         } finally {
             isLoading.emit(false)
