@@ -138,10 +138,12 @@ enum class Screens(@StringRes val title: Int) {
 @Composable
 private fun ExtendedFABComponent() {
     val showDialog = remember { mutableStateOf(false) }
-    val capturedImage = remember { mutableStateOf<Bitmap?>(null) }
-    val itemName = remember { mutableStateOf("") }
-    val itemQuantity = remember { mutableStateOf("") }
-    val itemPrice = remember { mutableStateOf("") }
+    val fieldMissingDialog = remember { mutableStateOf(false) }
+    var capturedImage = remember { mutableStateOf<Bitmap?>(null) }
+    var itemName = remember { mutableStateOf("") }
+    var itemQuantity = remember { mutableStateOf("") }
+    var itemPrice = remember { mutableStateOf("") }
+    var message = remember { mutableStateOf("") }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -188,6 +190,31 @@ private fun ExtendedFABComponent() {
             itemQuantity.value = ""
             itemPrice.value = ""
         }
+    }
+
+    //pop up a dialog telling user that some fields are missing
+    if (fieldMissingDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showDialog.value = false },
+            title = { Text("Fail To Add Item!",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Red)},
+            text = {
+                Text(message.value,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray)
+            },
+            confirmButton = {
+                Button(onClick = {
+                    fieldMissingDialog.value = false
+                    message.value = ""
+                }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 
     //pop up a dialog for user to add item to the inventory
@@ -300,13 +327,19 @@ private fun ExtendedFABComponent() {
             },
             confirmButton = {
                 Button(onClick = {
-                    // Upload the captured image to Firestore Storage
-                    capturedImage.value?.let { imageBitmap ->
-                        addItemToFirestore(imageBitmap)
-                    }
+                    message.value = checkMissingField(itemName.value, itemQuantity.value, itemPrice.value, capturedImage.value)
 
-                    // Close the dialog
-                    showDialog.value = false
+                    //check if there is any field missing
+                    if(message.value == "Fields missing valid entries: ") {
+                        // Upload the captured image to Firestore Storage
+                        capturedImage.value?.let { imageBitmap ->
+                            addItemToFirestore(imageBitmap)
+                        }
+                        // Close the dialog
+                        showDialog.value = false
+                    } else {
+                        fieldMissingDialog.value = true
+                    }
                 }) {
                     Text("OK")
                 }
@@ -317,7 +350,10 @@ private fun ExtendedFABComponent() {
     val context = LocalContext.current
 
     FloatingActionButton(
-        onClick = { //takePicture(activity, context, cameraLauncher)
+        onClick = { capturedImage.value = null
+            itemName.value = ""
+            itemQuantity.value = ""
+            itemPrice.value = ""
             showDialog.value = true},
         content = {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
@@ -332,6 +368,23 @@ private fun ExtendedFABComponent() {
             }
         }
     )
+}
+
+private fun checkMissingField(itemName:String, itemQuantity:String, itemPrice:String, capturedImage:Bitmap?): String{
+    var msg = "Fields missing valid entries: "
+    if(itemName == "" ){
+        msg += " name, "
+    }
+    if(itemQuantity == "") {
+        msg += " quantity, "
+    }
+    if(itemPrice == "") {
+        msg += " price, "
+    }
+    if(capturedImage == null) {
+        msg += " picture, "
+    }
+    return msg
 }
 
 
