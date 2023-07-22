@@ -328,7 +328,7 @@ fun App() {
             topBar = {
                 val showShoppingCart = currentScreen == Screens.Shopping
                 val showCloseIcon = currentScreen == Screens.Cart
-                AppBar(onMenuClick = { scope.launch { drawerState.open() } }, showShoppingCart, showCloseIcon, navController)
+                AppBar(onMenuClick = { scope.launch { drawerState.open() } }, showShoppingCart, showCloseIcon, navController, cartViewModel)
             },
             floatingActionButton = {
                 if (currentScreen == Screens.Farm) {  // Check the current screen
@@ -372,7 +372,7 @@ fun App() {
                             ShoppingCenterScreen(cartViewModel)
                         }
                         composable(route = Screens.Cart.name){
-                            CartScreen(cartViewModel)
+                            CartScreen(cartViewModel, navController)
                         }
 //                    Settings
                         composable(route = Screens.Settings.name){
