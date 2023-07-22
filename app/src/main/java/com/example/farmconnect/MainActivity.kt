@@ -56,6 +56,11 @@ class MainActivity : ComponentActivity() {
             startActivity(Intent(this, HomePage::class.java))
             finish()
         }
+        /*
+        Log.d(TAG, "HomePage screen")
+        startActivity(Intent(this, HomePage::class.java))
+        finish()*/
+
     }
 }
 
