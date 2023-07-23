@@ -1,7 +1,22 @@
 package com.example.farmconnect.data
 
 import com.example.farmconnect.R
-import com.example.farmconnect.ui.shopping.Item
+
+data class Item(
+    val name: String,
+    val price: Double,
+    val quantity: Int,
+    val imageId: Int
+) {
+    fun doesMatchSearchQuery(query: String): Boolean {
+        val matchingCombinations = listOf(
+            "$name",
+        )
+        return matchingCombinations.any {
+            it.contains(query, ignoreCase = true)
+        }
+    }
+}
 
 val postedItems = listOf(
     Item(
