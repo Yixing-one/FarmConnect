@@ -194,14 +194,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onSearchTextChange(text: String){
+    fun onSearchTextChange(text: String) {
         _searchText.value = text
     }
 }
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalGlideComposeApi::class)
 @Composable
-fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier){
+fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier) {
 
     val permissionState = rememberPermissionState(permission = Manifest.permission.RECORD_AUDIO)
     SideEffect {
@@ -229,8 +229,8 @@ fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier){
                     permissionState.launchPermissionRequest()
             }
     ) {
-        Column{
-           Image(
+        Column {
+            Image(
                 painter = rememberAsyncImagePainter(model = item.imageBitmap),
                 contentDescription = "image",
                 modifier = Modifier
@@ -396,8 +396,9 @@ private fun ExtendedFABComponent() {
     FloatingActionButton(
         onClick = { takePicture(context, cameraLauncher) },
         content = {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-                .padding(horizontal = 10.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                    .padding(horizontal = 10.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -420,7 +421,7 @@ private fun takePicture(context: Context, cameraLauncher: ActivityResultLauncher
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InventoryScreen(){
+fun InventoryScreen() {
     cur_context = LocalContext.current
     val viewModel = viewModel<MainViewModel>()
     val searchText by viewModel.searchText.collectAsState()
@@ -431,7 +432,7 @@ fun InventoryScreen(){
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-    ){
+    ) {
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -443,12 +444,12 @@ fun InventoryScreen(){
             }
 
         } else {
-            Row{
+            Row {
                 TextField(
                     value = searchText,
                     onValueChange = viewModel::onSearchTextChange,
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = {Text(text = "Search")},
+                    placeholder = { Text(text = "Search") },
                 )
             }
 
