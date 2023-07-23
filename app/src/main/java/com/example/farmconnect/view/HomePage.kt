@@ -90,10 +90,18 @@ import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import android.app.Activity
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.example.farmconnect.ui.farmer.AddPostingsMarketScreen
 import com.example.farmconnect.ui.farmer.EditMarketScreen
 import com.example.farmconnect.ui.farmer.EditMarketplaceScreen
 import com.example.farmconnect.ui.farmer.MarketScreen
+import com.example.farmconnect.ui.farmer.PostScreen
 
 class HomePage : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -140,25 +148,13 @@ private fun ExtendedFABComponent() {
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
+            print("picture successfully taken")
             val imageBitmap = result.data?.extras?.get("data") as? Bitmap
             showDialog.value = true
             capturedImage.value = imageBitmap
         }
     }
     val activity = LocalContext.current as Activity
-    /*
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { result ->
-        if (result) {
-            // Picture was taken successfully
-            // Do something with the picture, e.g., save it or display it
-            // Get the captured image file from the result data
-            val imageFile = result.data?.data ?: return@rememberLauncherForActivityResult
-            val imageBitmap = result.data?.extras?.get("data") as? Bitmap
-            showDialog.value = true
-            capturedImage.value = imageBitmap
-        }
-    }*/
-
 
     fun addItemToFirestore(imageBitmap: Bitmap) {
         // add captured image to Firestore Storage
@@ -167,7 +163,6 @@ private fun ExtendedFABComponent() {
         val imagesRef = storageRef.child("images/crops")
         val fileName = "image_${System.currentTimeMillis()}.png"
         val imageRef = imagesRef.child(fileName)
-
         val baos = ByteArrayOutputStream()
         imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
         val imageData = baos.toByteArray()
@@ -196,21 +191,80 @@ private fun ExtendedFABComponent() {
         }
     }
 
+    //pop up a dialog for user to add item to the inventory
     if (showDialog.value) {
+        val context = LocalContext.current
         AlertDialog(
             onDismissRequest = { showDialog.value = false },
-            title = { Text("Add Item to inventory") },
+            title = { Text("Add Item to inventory",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray)},
             text = {
-                Column {
-                    capturedImage.value?.let {
+                Column(modifier = Modifier.padding(horizontal = 10.dp)) {
+                    if(capturedImage.value == null) {
                         Image(
-                            bitmap = it.asImageBitmap(),
+                            painter = painterResource(id = R.drawable.no_item_image), // Replace "your_image" with the actual image resource ID
                             contentDescription = null,
                             modifier = Modifier
                                 .size(200.dp)
-                                .align(Alignment.CenterHorizontally)
+                                .padding(20.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        capturedImage.value?.let {
+                            Image(
+                                bitmap = it.asImageBitmap(),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .padding(20.dp),
+                            )
+                        }
+                    }
+                    if(capturedImage.value == null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                                .padding(horizontal = 0.dp)
+                        ) {
+                            FloatingActionButton(
+                                onClick = { takePicture(activity, context, cameraLauncher) },
+                                content = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .padding(horizontal = 10.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "",
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        )
+                                        Text("Take Picture For The New Item")
+                                    }
+                                }
+                            )
+                        }
+                    } else {
+                        FloatingActionButton(
+                            onClick = { takePicture(activity, context, cameraLauncher) },
+                            content = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .padding(horizontal = 10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "",
+                                        modifier = Modifier.padding(end = 4.dp)
+                                    )
+                                    Text("Re-take Picture For The Item")
+                                }
+                            }
                         )
                     }
+
                     Spacer(modifier = Modifier.height(16.dp))
                     TextField(
                         value = itemName.value,
@@ -264,7 +318,8 @@ private fun ExtendedFABComponent() {
     val context = LocalContext.current
 
     FloatingActionButton(
-        onClick = { takePicture(activity, context, cameraLauncher) },
+        onClick = { //takePicture(activity, context, cameraLauncher)
+            showDialog.value = true},
         content = {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
                 .padding(horizontal = 10.dp)
@@ -277,20 +332,15 @@ private fun ExtendedFABComponent() {
                 Text("Add Item")
             }
         }
-
     )
 }
 
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalGlideComposeApi::class)
 private fun takePicture(activity: Activity, context: Context, cameraLauncher: ActivityResultLauncher<Intent>) {
-    //cameraLauncher.launch(null)
     val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-    activity.startActivityForResult(cameraIntent, 1)
-    /*
-    if (cameraIntent.resolveActivity(context.packageManager) != null) {
-        cameraLauncher.launch(cameraIntent)
-    }*/
+    cameraLauncher.launch(cameraIntent)
+    //activity.startActivityForResult(cameraIntent, 1)
 }
 
 
@@ -365,6 +415,9 @@ fun App() {
                         }
                         composable(route = Screens.Finance.name){
                             FinanceStatsScreen()
+                        }
+                        composable(route = Screens.Donate.name){
+                            PostScreen()
                         }
                         composable(route = Screens.Marketplace.name){
                             MarketScreen(navController)
