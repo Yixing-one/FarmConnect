@@ -1,5 +1,7 @@
 package com.example.farmconnect.ui.farmer
 
+import android.content.ContentValues.TAG
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +20,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,24 +30,63 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.example.farmconnect.ui.theme.lightGreen
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 //credits: https://maneesha-erandi.medium.com/kotlin-with-jetpack-compose-data-tables-c28faf4334d9
 
+class FinanceViewModel: ViewModel() {
+    private val db = Firebase.firestore
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
+
+    private val _items = MutableStateFlow<List<TableItem>>(listOf())
+    val items: StateFlow<List<TableItem>> = _items
+
+    init {
+        viewModelScope.launch {
+            loadItems()
+        }
+    }
+
+    private suspend fun loadItems() {
+        val financeItems = db.collection("finance")
+            .whereEqualTo("userId", currentUserId)
+            .get()
+            .await().documents[0].data?.getValue("items") as List<HashMap<*,*>>
+
+        val itemsList = mutableListOf<TableItem>()
+        for (item in financeItems) {
+            val item = TableItem(
+                name = item["name"].toString(),
+                quantitySold = (item["quantitySold"] as Long).toDouble(),
+                dateSold = item["dateSold"] as? Timestamp ?: Timestamp.now(),
+                revenue = item["revenue"] as? Double ?: 0.0
+            )
+            itemsList.add(item)
+        }
+
+        _items.emit(itemsList)
+    }
+}
+
 data class TableItem(
     val name: String,
-    val quantity: Double,
-    val date: String,
+    val quantitySold: Double,
+    val dateSold: Timestamp,
     val revenue: Double
-)
-
-val data = listOf(
-    TableItem("Apples", 38.5, "21/04/23", 23.5),
-    TableItem("Oranges", 24.5, "16/06/23", 12.4),
-    TableItem("Bananas", 10.0, "14/06/23", 10.32),
-    TableItem("Potatoes", 30.5, "23/04/23", 45.3),
-    TableItem("Mango", 21.5, "23/05/23", 34.3),
 )
 
 @Composable
@@ -66,6 +109,10 @@ fun RowScope.Cell(
 
 @Composable
 fun DataTable(){
+
+    val viewModel = viewModel<FinanceViewModel>()
+    val financeItems by viewModel.items.collectAsState()
+
     LazyColumn(Modifier.padding(vertical = 10.dp)){
         item {
             Row(
@@ -79,7 +126,7 @@ fun DataTable(){
                     title = true
                 )
                 Cell(
-                    text = "Quantity (lbs)",
+                    text = "Quantity Sold (lbs)",
                     alignment = TextAlign.Center,
                     weight = .25f,
                     title = true
@@ -105,7 +152,7 @@ fun DataTable(){
                     .fillMaxWidth()
             )
         }
-        itemsIndexed(data) { _, item ->
+        itemsIndexed(financeItems) { _, item ->
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -116,12 +163,12 @@ fun DataTable(){
                     weight = .22f
                 )
                 Cell(
-                    text = String.format("%.2f", item.quantity),
+                    text = String.format("%.2f", item.quantitySold),
                     alignment = TextAlign.Left,
                     weight = .15f
                 )
                 Cell(
-                    text = item.date,
+                    text = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(item.dateSold.toDate()),
                     alignment = TextAlign.Center,
                     weight = .3f
                 )
@@ -144,64 +191,80 @@ fun DataTable(){
 
 @Composable
 fun FinanceStatsScreen(){
+
+    val viewModel = viewModel<FinanceViewModel>()
+    val financeItems by viewModel.items.collectAsState()
+
+
     fun totalRevenue(): Double{
         var total: Double = 0.0
-        data.forEach { item  ->
+        financeItems.forEach { item  ->
             total += item.revenue
         }
         return total
     }
     fun totalQuantity(): Double {
         var total: Double = 0.0
-        data.forEach { item  ->
-            total += item.quantity
+        financeItems.forEach { item  ->
+            total += item.quantitySold
         }
         return total
     }
 
-    Surface(modifier = Modifier
-        .fillMaxSize()
-        .padding(horizontal = 10.dp)
-    ){
-        Column(){
-            Row(Modifier.fillMaxWidth()){
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = lightGreen),
-                    modifier = Modifier
-                        .weight(0.5f)
-                        .padding(end = 10.dp),
+    if (financeItems.isNotEmpty()) {
+        try {
+            val firstItem = financeItems[0]
+            Log.d(TAG, "FinanceItems is not empty")
+            Log.d(TAG, firstItem.toString())
+        } catch (e: Exception) {
+            Log.e(TAG, "Error accessing financeItems: ${e.message}", e)
+        }
 
+        Surface(modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 10.dp)
+        ){
+            Column(){
+                Row(Modifier.fillMaxWidth()){
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = lightGreen),
+                        modifier = Modifier
+                            .weight(0.5f)
+                            .padding(end = 10.dp),
+
+                        ) {
+                        Column(modifier = Modifier
+                            .padding(10.dp)
+                            .fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ){
+                            Text(text = "Total Revenue", color = Color.Black)
+                            Text(text = '$' + String.format("%.2f", totalRevenue()), fontSize = 27.sp, fontWeight = FontWeight.Bold, color = Color.Black )
+                        }
+                    }
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = lightGreen),
+                        modifier = Modifier
+                            .weight(0.5f)
+                            .padding(start = 10.dp)
                     ) {
-                    Column(modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ){
-                        Text(text = "Total Revenue", color = Color.Black)
-                        Text(text = '$' + String.format("%.2f", totalRevenue()), fontSize = 27.sp, fontWeight = FontWeight.Bold, color = Color.Black )
+                        Column(modifier = Modifier
+                            .padding(10.dp)
+                            .fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ){
+                            Text(text = "Total Quantity", color = Color.Black)
+                            Text(text = String.format("%.0f", totalQuantity()) + " lbs", fontSize = 27.sp, fontWeight = FontWeight.Bold, color= Color.Black )
+                        }
                     }
                 }
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = lightGreen),
-                    modifier = Modifier
-                        .weight(0.5f)
-                        .padding(start = 10.dp)
-                ) {
-                    Column(modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ){
-                        Text(text = "Total Quantity", color = Color.Black)
-                        Text(text = String.format("%.0f", totalQuantity()) + " lbs", fontSize = 27.sp, fontWeight = FontWeight.Bold, color= Color.Black )
-                    }
-                }
+                DataTable()
             }
-            DataTable()
         }
     }
+
 }
 
 
