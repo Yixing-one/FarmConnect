@@ -54,12 +54,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -121,7 +125,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             initialValue = _items.value
         )
 
-    val isLoading = MutableStateFlow(true)
+    val isLoading = MutableStateFlow(false)
 
     init {
         viewModelScope.launch {
@@ -157,6 +161,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun loadItems() {
+        if(isLoading.value == true) {
+            return
+        }
         isLoading.emit(true) // Start loading
         try {
             if (isNetworkAvailable()) {
@@ -167,26 +174,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     .whereEqualTo("userId", currentUserId)
                     .get()
                     .await()
+                Log.d("TAGdocsize,", documents.size().toString());
 
                 //load all the items from database to local cache
-                for (document in documents) {
+                for (i in 0 until documents.size() step 1) {
+                    var document = documents.documents[i]
+                    Log.d("TAGdoc,", "1");
                     val docData = document.data
-                    val imageUrl = docData.getValue("imageUrl").toString()
+                    val imageUrl = docData?.getValue("imageUrl").toString()
                     val storageRef = storage.reference
-                    val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+                    val imageRef = storageRef.child(docData?.getValue("imageUrl").toString())
                     val TEN_MEGABYTE: Long = 1024 * 1024 * 10
                     val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
 
                     //add the item to local cache
-                    val name = docData.getValue("name").toString()
-                    val price = docData.getValue("price").toString().toDouble()
-                    val quantity = docData.getValue("quantity").toString().toInt()
+                    val name = docData?.getValue("name").toString()
+                    val price = docData?.getValue("price").toString().toDouble()
+                    val quantity = docData?.getValue("quantity").toString().toInt()
                     val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    //imageBitmap = Bitmap.createBitmap(100, 200, Bitmap.Config.ARGB_8888)
+                    Log.d("TAGdoc123,", "quantity");
                     Inventory_Items.addItem(name, price, quantity, imageBitmap)
                 }
+                _items.emit(Inventory_Items.item_list.toList())
+            } else {
+                //if there is no internet connection, it will
             }
-            _items.emit(Inventory_Items.item_list.toList())
-
         } catch (exception: Exception) {
             isLoading.emit(false)
         } finally {
@@ -230,7 +243,7 @@ fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier){
             }
     ) {
         Column{
-           Image(
+            Image(
                 painter = rememberAsyncImagePainter(model = item.imageBitmap),
                 contentDescription = "image",
                 modifier = Modifier
@@ -238,19 +251,6 @@ fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier){
                     .height(120.dp),
                 contentScale = ContentScale.Crop
             )
-            /*GlideImage(
-                model = "$${item.imageUrl}",
-                contentDescription = "${item.name}",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp), // Modify the image size as needed
-                contentScale = ContentScale.Crop){
-                // shows a placeholder ImageBitmap when loading.
-                // shows an error ImageBitmap when the request failed.
-                it.error("$${item.imageUrl}")
-                    .placeholder(R.drawable.alert_dark_frame)
-                    .load( "$${item.imageUrl}")
-            }*/
 
             Text(
                 text = "$${item.price}",
@@ -275,21 +275,24 @@ fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier){
 @Composable
 private fun ExtendedFABComponent() {
     val showDialog = remember { mutableStateOf(false) }
-    val capturedImage = remember { mutableStateOf<Bitmap?>(null) }
-    val itemName = remember { mutableStateOf("") }
-    val itemQuantity = remember { mutableStateOf("") }
-    val itemPrice = remember { mutableStateOf("") }
-
+    val fieldMissingDialog = remember { mutableStateOf(false) }
+    var capturedImage = remember { mutableStateOf<Bitmap?>(null) }
+    var itemName = remember { mutableStateOf("") }
+    var itemQuantity = remember { mutableStateOf("") }
+    var itemPrice = remember { mutableStateOf("") }
+    var message = remember { mutableStateOf("") }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
+            print("picture successfully taken")
             val imageBitmap = result.data?.extras?.get("data") as? Bitmap
             showDialog.value = true
             capturedImage.value = imageBitmap
         }
     }
+    val activity = LocalContext.current as Activity
 
     fun addItemToFirestore(imageBitmap: Bitmap) {
         // add captured image to Firestore Storage
@@ -298,7 +301,6 @@ private fun ExtendedFABComponent() {
         val imagesRef = storageRef.child("images/crops")
         val fileName = "image_${System.currentTimeMillis()}.png"
         val imageRef = imagesRef.child(fileName)
-
         val baos = ByteArrayOutputStream()
         imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
         val imageData = baos.toByteArray()
@@ -327,21 +329,109 @@ private fun ExtendedFABComponent() {
         }
     }
 
-    if (showDialog.value) {
+    //pop up a dialog telling user that some fields are missing
+    if (fieldMissingDialog.value) {
         AlertDialog(
             onDismissRequest = { showDialog.value = false },
-            title = { Text("Add Item to inventory") },
+            title = { Text("Fail To Add Item!",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Red)},
             text = {
-                Column {
-                    capturedImage.value?.let {
+                Text(message.value,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray)
+            },
+            confirmButton = {
+                Button(onClick = {
+                    fieldMissingDialog.value = false
+                    message.value = ""
+                }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    //pop up a dialog for user to add item to the inventory
+    if (showDialog.value) {
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = { showDialog.value = false },
+            title = { Text("Add Item to inventory",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.DarkGray)},
+            text = {
+                Column(modifier = Modifier.padding(horizontal = 10.dp)) {
+                    if(capturedImage.value == null) {
                         Image(
-                            bitmap = it.asImageBitmap(),
+                            painter = painterResource(id = com.example.farmconnect.R.drawable.no_item_image), // Replace "your_image" with the actual image resource ID
                             contentDescription = null,
                             modifier = Modifier
                                 .size(200.dp)
-                                .align(Alignment.CenterHorizontally)
+                                .padding(20.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        capturedImage.value?.let {
+                            Image(
+                                bitmap = it.asImageBitmap(),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .padding(20.dp),
+                            )
+                        }
+                    }
+                    if(capturedImage.value == null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                                .padding(horizontal = 0.dp)
+                        ) {
+                            FloatingActionButton(
+                                onClick = {
+                                    takePicture(activity, context, cameraLauncher)
+                                },
+                                content = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .padding(horizontal = 10.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "",
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        )
+                                        Text("Take Picture For The New Item")
+                                    }
+                                }
+                            )
+                        }
+                    } else {
+                        FloatingActionButton(
+                            onClick = {
+                                takePicture(activity, context, cameraLauncher)
+                            },
+                            content = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .padding(horizontal = 10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "",
+                                        modifier = Modifier.padding(end = 4.dp)
+                                    )
+                                    Text("Re-take Picture For The Item")
+                                }
+                            }
                         )
                     }
+
                     Spacer(modifier = Modifier.height(16.dp))
                     TextField(
                         value = itemName.value,
@@ -378,13 +468,19 @@ private fun ExtendedFABComponent() {
             },
             confirmButton = {
                 Button(onClick = {
-                    // Upload the captured image to Firestore Storage
-                    capturedImage.value?.let { imageBitmap ->
-                        addItemToFirestore(imageBitmap)
-                    }
+                    message.value = checkMissingField(itemName.value, itemQuantity.value, itemPrice.value, capturedImage.value)
 
-                    // Close the dialog
-                    showDialog.value = false
+                    //check if there is any field missing
+                    if(message.value == "Fields missing valid entries: ") {
+                        // Upload the captured image to Firestore Storage
+                        capturedImage.value?.let { imageBitmap ->
+                            addItemToFirestore(imageBitmap)
+                        }
+                        // Close the dialog
+                        showDialog.value = false
+                    } else {
+                        fieldMissingDialog.value = true
+                    }
                 }) {
                     Text("OK")
                 }
@@ -393,8 +489,13 @@ private fun ExtendedFABComponent() {
     }
 
     val context = LocalContext.current
+
     FloatingActionButton(
-        onClick = { takePicture(context, cameraLauncher) },
+        onClick = { capturedImage.value = null
+            itemName.value = ""
+            itemQuantity.value = ""
+            itemPrice.value = ""
+            showDialog.value = true},
         content = {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
                 .padding(horizontal = 10.dp)
@@ -407,15 +508,31 @@ private fun ExtendedFABComponent() {
                 Text("Add Item")
             }
         }
-
     )
 }
 
-private fun takePicture(context: Context, cameraLauncher: ActivityResultLauncher<Intent>) {
-    val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-    if (cameraIntent.resolveActivity(context.packageManager) != null) {
-        cameraLauncher.launch(cameraIntent)
+fun checkMissingField(itemName:String, itemQuantity:String, itemPrice:String, capturedImage:Bitmap?): String{
+    var msg = "Fields missing valid entries: "
+    if(itemName == "" ){
+        msg += " name, "
     }
+    if(itemQuantity == "") {
+        msg += " quantity, "
+    }
+    if(itemPrice == "") {
+        msg += " price, "
+    }
+    if(capturedImage == null) {
+        msg += " picture, "
+    }
+    return msg
+}
+
+
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalGlideComposeApi::class)
+fun takePicture(activity: Activity, context: Context, cameraLauncher: ActivityResultLauncher<Intent>) {
+    val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+    cameraLauncher.launch(cameraIntent)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -454,6 +571,7 @@ fun InventoryScreen(){
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            Log.d("TAGitemsize,", theFoodItems.size.toString());
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 128.dp)
             ) {
