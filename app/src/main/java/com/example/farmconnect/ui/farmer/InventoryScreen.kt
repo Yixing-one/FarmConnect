@@ -230,7 +230,7 @@ fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier){
             }
     ) {
         Column{
-           Image(
+            Image(
                 painter = rememberAsyncImagePainter(model = item.imageBitmap),
                 contentDescription = "image",
                 modifier = Modifier

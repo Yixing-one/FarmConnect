@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,14 +55,24 @@ import com.example.farmconnect.data.allPosts
 import com.example.farmconnect.ui.theme.darkGreen
 
 
+//    val charity_name: String,
+//    val charity_location: String,
+//    val charity_distance: Double,
+//    val item_name: String,
+//    val item_amount: Double,
+//    @DrawableRes
+//    val imageId: Int
+
 data class Post(
+    val postId: Int,
     val charity_name: String,
     val charity_location: String,
     val charity_distance: Double,
     val item_name: String,
     val item_amount: Double,
     @DrawableRes
-    val imageId: Int
+    val imageId: Int,
+    var isClaimed: Boolean = false
 ){
     fun doesMatchSearchQuery(query: String): Boolean {
         val matchingCombinations = listOf(
@@ -137,7 +148,7 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 0.dp),
                     style = TextStyle(
                         fontSize = 21.sp,
-                        color = Color.Black,
+//                        color = Color.Black,
                         fontWeight = FontWeight.Bold
                     )
                 )
@@ -149,7 +160,7 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                     modifier = Modifier.padding(0.dp, 0.dp, 12.dp, 0.dp),
                     style = TextStyle(
                         fontSize = 15.sp,
-                        color = Color.Blue,
+//                        color = Color.Blue,
                         fontWeight = FontWeight.Bold
                     )
                 )
@@ -161,7 +172,7 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                     modifier = Modifier.padding(0.dp, 0.dp, 19.dp, 0.dp),
                     style = TextStyle(
                         fontSize = 12.sp,
-                        color = Color.DarkGray,
+//                        color = Color.DarkGray,
                         fontWeight = FontWeight.Bold
                     )
                 )
@@ -182,13 +193,32 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                         modifier = Modifier.padding(8.dp, 3.dp, 5.dp, 0.dp),
                         style = TextStyle(
                             fontSize = 15.sp,
-                            color = Color.Black,
+//                            color = Color.Black,
                             fontWeight = FontWeight.Bold
                         )
                     )
+                    Button(
+                        onClick = {
+                            post.isClaimed = true
+                        },
+//                modifier = Modifier.padding(8.dp),
+                        enabled = !post.isClaimed
+                    ) {
+                        Text(text = if (post.isClaimed) "Claimed" else "Claim")
+                    }
                 }
 
             }
+
+//            Button(
+//                onClick = {
+//                    post.isClaimed = true
+//                },
+////                modifier = Modifier.padding(8.dp),
+//                enabled = !post.isClaimed
+//            ) {
+//                Text(text = if (post.isClaimed) "Claimed" else "Claim")
+//            }
         }
     }
 }

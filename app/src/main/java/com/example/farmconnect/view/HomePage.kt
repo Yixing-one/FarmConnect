@@ -101,6 +101,7 @@ import com.example.farmconnect.ui.farmer.AddPostingsMarketScreen
 import com.example.farmconnect.ui.farmer.EditMarketScreen
 import com.example.farmconnect.ui.farmer.EditMarketplaceScreen
 import com.example.farmconnect.ui.farmer.MarketScreen
+import com.example.farmconnect.ui.farmer.PostScreen
 
 class HomePage : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -414,6 +415,9 @@ fun App() {
                         }
                         composable(route = Screens.Finance.name){
                             FinanceStatsScreen()
+                        }
+                        composable(route = Screens.Donate.name){
+                            PostScreen()
                         }
                         composable(route = Screens.Marketplace.name){
                             MarketScreen(navController)
