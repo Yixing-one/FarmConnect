@@ -55,6 +55,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.farmconnect.SpeechRecognizerContract
+import com.example.farmconnect.data.Item
 import com.example.farmconnect.ui.charity.PostCard
 import com.example.farmconnect.ui.theme.darkGreen
 import com.google.accompanist.permissions.ExperimentalPermissionsApi

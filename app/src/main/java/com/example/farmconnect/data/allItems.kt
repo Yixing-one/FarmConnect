@@ -1,7 +1,7 @@
 package com.example.farmconnect.data
 
 import com.example.farmconnect.R
-import com.example.farmconnect.ui.farmer.Item
+//import com.example.farmconnect.ui.farmer.Item
 
 val allItems = listOf(
     Item(
