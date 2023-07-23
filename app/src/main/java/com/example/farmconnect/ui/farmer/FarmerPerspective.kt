@@ -1,4 +1,6 @@
+//package com.example.farmconnect.data
 package com.example.farmconnect.ui.farmer
+
 
 import android.Manifest
 import android.util.Log
@@ -50,6 +52,10 @@ import com.example.farmconnect.data.allPosts
 import com.example.farmconnect.ui.charity.Post
 
 import com.example.farmconnect.data.allItems
+import com.example.farmconnect.data.postedItems
+
+//import com.example.farmconnect.R
+
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -79,93 +85,6 @@ import kotlinx.coroutines.tasks.await
 
 
 
-//class FarmerPerspectiveDonation : ViewModel(){
-//    private val db = Firebase.firestore
-//    private val storage = Firebase.storage
-//    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
-//
-//
-//    private val _searchText = MutableStateFlow("")
-//    val searchText: StateFlow<String> = _searchText.asStateFlow()
-//
-//    private val _isSearching = MutableStateFlow(false)
-//    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
-//
-//    private val _items = MutableStateFlow<List<Post>>(listOf()) //MAYBE
-//    val items: StateFlow<List<Post>> = searchText
-//        .combine(_items) { text, items ->
-//            if (text.isBlank()) {
-//                items
-//            } else {
-//                items.filter {
-//                    it.doesMatchSearchQuery(text)
-//                }
-//            }
-//        }
-//        .stateIn(
-//            scope = viewModelScope,
-//            started = SharingStarted.WhileSubscribed(),
-//            initialValue = _items.value
-//        )
-//
-//
-//    val isLoading = MutableStateFlow(true)
-//
-//    init {
-//        viewModelScope.launch {
-//            loadItems()
-//        }
-//    }
-//
-//    private suspend fun loadItems() {
-//        isLoading.emit(true) // Start loading
-//        try {
-//            val documents = db.collection("marketplace")
-//                .whereEqualTo("userId", currentUserId)
-//                .get()
-//                .await()
-//
-//            val marketItems = ArrayList<Post>() //MAYBE
-//
-//            for (document in documents) {
-//                val docData = document.data
-//                val storageRef = storage.reference
-////                val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
-//
-////                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
-////                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-////                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-//
-//                marketItems.add(
-//                    Post( //MAYBE
-//                        documentId = document.id,
-//                        name = docData.getValue("name").toString(),
-//                        price = docData.getValue("price").toString().toDouble(),
-//                        quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
-//                        quantitySold = docData.getValue("quantitySold").toString().toInt(),
-//                        imageBitmap = imageBitmap
-//                    )
-//                )
-//            }
-//
-//            _items.emit(marketItems.toList())
-//
-//        } catch (exception: Exception) {
-//            isLoading.emit(false)
-//        } finally {
-//            isLoading.emit(false)
-//        }
-//    }
-//
-//    fun onSearchTextChange(text: String){
-//        _searchText.value = text
-//    }
-//
-//
-//
-//}
-
-
 class PostViewModel : ViewModel() {
     private val db = Firebase.firestore
 
@@ -179,7 +98,10 @@ class PostViewModel : ViewModel() {
 
 
 val inventoryDatabase = mutableStateMapOf<Int, Int>().apply {
-    allItems.forEachIndexed { index, item ->
+//    allItems.forEachIndexed { index, item ->
+//        this[index + 1] = item.quantity
+//    }
+    postedItems.forEachIndexed { index, item ->
         this[index + 1] = item.quantity
     }
 }
@@ -277,8 +199,8 @@ fun PostScreen() {
                 .height(210.dp),
             state = lazyListState
         ) {
-            items(allItems.size) { index ->
-                val item = allItems[index]
+            items(postedItems.size) { index ->
+                val item = postedItems[index]
                 val selectedQuantity = remember { mutableStateOf("") }
 
                 Row(
@@ -361,47 +283,6 @@ fun PostScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
 
-
-//        Button(
-//            onClick = {
-//                if (selectedItems.isNotEmpty() && charityNameState.value.isNotBlank() && charityLocationState.value.isNotBlank()) {
-//                    val newPosts = selectedItems.mapNotNull { (selectedItem, selectedQuantity) ->
-//                        val availableQuantity = inventoryDatabase[selectedItem.id] ?: 0
-//                        if (selectedQuantity <= availableQuantity) {
-//                            selectedItem to selectedQuantity
-//                        } else {
-//                            null
-//                        }
-//                    }
-//                    if (newPosts.isNotEmpty()) {
-//                        newPosts.forEach { (item, quantity) ->
-//                            inventoryDatabase[item.id] = inventoryDatabase[item.id]?.minus(quantity) ?: 0
-//                        }
-//
-//                        val post = Post(
-//                            postIdCounter++,
-//                            charityNameState.value,
-//                            charityLocationState.value,
-//                            287.4,
-//                            newPosts[0].first.name,
-//                            newPosts[0].second.toDouble(),
-//                            newPosts[0].first.imageId
-//                        )
-//
-//                        allPosts.add(post)
-//
-//                        selectedItems.clear()
-//                        charityNameState.value = ""
-//                        charityLocationState.value = ""
-//                    } else {
-//                        showError = true
-//                    }
-//                }
-//            },
-//            enabled = selectedItems.isNotEmpty() && selectedItems.all { it.second > 0 }
-//        ) {
-//            Text(text = "Add to Post")
-//        }
 
         Button(
             onClick = {
@@ -510,50 +391,3 @@ fun PreviewPostScreen() {
     PostScreen()
 }
 
-
-//adding to post
-//        Button(
-//            onClick = {
-//                if (selectedItems.isNotEmpty() && charityNameState.value.isNotBlank() && charityLocationState.value.isNotBlank()) {
-//                    val newPosts = selectedItems.mapNotNull { (selectedItem, selectedQuantity) ->
-//                        selectedItem to selectedQuantity
-//                    }
-//                    if (newPosts.isNotEmpty()) {
-//                        // Deduct quantities from inventoryDatabase
-//                        newPosts.forEach { (item, quantity) ->
-//                            inventoryDatabase[item.id] = inventoryDatabase[item.id]?.minus(quantity) ?: 0
-//                        }
-//
-//                        val post = Post(
-//                            postIdCounter++,
-//                            charityNameState.value,
-//                            charityLocationState.value,
-//                            287.4,
-//                            newPosts[0].first.name,
-//                            newPosts[0].second.toDouble(),
-//                            newPosts[0].first.imageId
-//                        )
-//
-//                        allPosts.add(post)
-//
-//                        selectedItems.clear()
-//                        charityNameState.value = ""
-//                        charityLocationState.value = ""
-//                    } else {
-//                        showError = true
-//                    }
-//                }
-//            },
-//            enabled = selectedItems.isNotEmpty() && selectedItems.all { it.second > 0 }
-//        ) {
-//            Text(text = "Add to Post")
-//        }
-
-
-//            if (showError) {
-//                Snackbar(
-//                    modifier = Modifier.padding(top = 16.dp),
-//                    content = { Text(text = "Quantity limit exceeded", style = MaterialTheme.typography.bodyMedium) },
-//                    containerColor = Color(250, 142, 142)
-//                )
-//            }
