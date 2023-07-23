@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -28,9 +30,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,6 +43,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
@@ -172,8 +178,58 @@ class AddPostingViewModel() : ViewModel() {
         _searchText.value = text
     }
 }
+
+fun checkMissingField(itemName:String, itemQuantity:String, itemPrice:String): String{
+    var msg = "Fields missing valid entries: "
+    if(itemName == "" ){
+        msg += " name, "
+    }
+    if(itemQuantity == "") {
+        msg += " quantity, "
+    }
+    if(itemPrice == "") {
+        msg += " price"
+    }
+    return msg
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPostingsMarketItemCard(item: Inventory_Item, modifier: Modifier = Modifier) {
+
+    // State to control whether the popup is shown or not
+    var showDialog by remember { mutableStateOf(false) }
+    var fieldMissingDialog by remember { mutableStateOf(false) }
+    // State to hold the user input for the posting name
+    var postingName by remember { mutableStateOf("") }
+    var postingPrice by remember { mutableStateOf("") }
+    var postingQuantity by remember { mutableStateOf("") }
+    var message = remember { mutableStateOf("") }
+
+    if (fieldMissingDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Failed To Add Posting!",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Red)},
+            text = {
+                Text(message.value,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray)
+            },
+            confirmButton = {
+                Button(onClick = {
+                    fieldMissingDialog = false
+                    message.value = ""
+                }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     Card(
         modifier = modifier
             .width(350.dp)
@@ -205,7 +261,7 @@ fun AddPostingsMarketItemCard(item: Inventory_Item, modifier: Modifier = Modifie
             )
 
             Button(
-                onClick = {  },
+                onClick = { showDialog = true },
                 colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
                 modifier = Modifier
                     .weight(1f)
@@ -216,6 +272,82 @@ fun AddPostingsMarketItemCard(item: Inventory_Item, modifier: Modifier = Modifie
             }
 
         }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Add Posting to Marketplace",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.DarkGray)},
+            confirmButton = {
+                Button(
+                    onClick = {
+                        message.value = checkMissingField(postingName, postingQuantity, postingPrice)
+
+                        //check if there is any field missing
+                        if(message.value == "Fields missing valid entries: ") {
+                            showDialog = false
+                        } else {
+                            fieldMissingDialog = true
+                        }
+                    }
+                ) {
+                    Text(text = "Save")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showDialog = false }
+                ) {
+                    Text(text = "Cancel")
+                }
+            },
+            text = {
+                Column(modifier = Modifier.padding(horizontal = 10.dp)) {
+                    Image(
+                        painter = rememberAsyncImagePainter(model = item.imageBitmap),
+                        contentDescription = "image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextField(
+                        value = postingName,
+                        onValueChange = { postingName = it },
+                        label = { Text("Enter Name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextField(
+                        value = postingQuantity,  // This should be a mutable state of String
+                        onValueChange = {
+                            if (it.toFloatOrNull() != null || it.isEmpty()) {
+                                postingQuantity = it
+                            }
+                        },
+                        label = { Text("Enter quantity") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextField(
+                        value = postingPrice,  // This should be a mutable state of String
+                        onValueChange = {
+                            if (it.toFloatOrNull() != null || it.isEmpty()) {
+                                postingPrice = it
+                            }
+                        },
+                        label = { Text("Enter price") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        )
     }
 }
 
