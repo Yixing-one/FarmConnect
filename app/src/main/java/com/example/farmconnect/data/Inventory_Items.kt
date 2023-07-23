@@ -18,8 +18,10 @@ data class Inventory_Item(
     }
 }
 
+
 object Inventory_Items {
     var item_list = mutableListOf<Inventory_Item>()
+    var update_item_list = mutableListOf<Inventory_Item>()
 
     fun addItem(name: String, price: Double, quantity:Int, imageBitmap:Bitmap) {
         item_list.add(
