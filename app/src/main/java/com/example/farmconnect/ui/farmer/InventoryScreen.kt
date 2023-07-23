@@ -90,25 +90,30 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import com.example.farmconnect.data.Inventory_Item
 import com.example.farmconnect.data.Inventory_Items
+import com.google.firebase.firestore.QueryDocumentSnapshot
+import com.google.firebase.firestore.QuerySnapshot
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.CompletableFuture
+import kotlinx.coroutines.*
 
 
 lateinit var cur_context: Context
 lateinit var viewModel: MainViewModel
+var internet_avaible = false
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val db = Firebase.firestore
-    private val storage = Firebase.storage
-    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
+    private var db = Firebase.firestore
+    private var storage = Firebase.storage
+    private var currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
 
-    private val _searchText = MutableStateFlow("")
+    private var _searchText = MutableStateFlow("")
     val searchText: StateFlow<String> = _searchText.asStateFlow()
 
-    private val _isSearching = MutableStateFlow(false)
+    private var _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
-    private val _items = MutableStateFlow<List<Inventory_Item>>(listOf())
+    var _items = MutableStateFlow<List<Inventory_Item>>(listOf())
     val items: StateFlow<List<Inventory_Item>> = searchText
         .combine(_items) { text, items ->
             if (text.isBlank()) {
@@ -127,23 +132,145 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val isLoading = MutableStateFlow(false)
 
-    init {
+    init{
         viewModelScope.launch {
             loadItems()
         }
     }
 
-    private fun isNetworkAvailable(): Boolean {
+    fun isNetworkAvailable() {
         val connectivityManager =
             cur_context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (connectivityManager != null) {
             val capabilities =
                 connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
             if (capabilities != null) {
-                return true
+                internet_avaible = true
+                return
             }
         }
-        return false
+        internet_avaible = false
+    }
+
+    suspend fun loadItems() {
+        internet_avaible = false
+        isNetworkAvailable()
+
+        if(isLoading.value == true) {
+            return
+        }
+        isLoading.emit(true)
+
+        try {
+            db = Firebase.firestore
+            storage = Firebase.storage
+
+            if(internet_avaible && (Inventory_Items.item_list.size == 0) && (Inventory_Items.update_item_list.size == 0)) {
+                //remove all the item in the local cache
+                Inventory_Items.item_list = mutableListOf<Inventory_Item>()
+
+                val documents = db.collection("inventory")
+                    .whereEqualTo("userId", currentUserId)
+                    .get()
+                    .await()
+
+                //load all the items from database to local cache
+                for (i in 0 until documents.size() step 1) {
+                    var document = documents.documents[i]
+                    val docData = document.data
+                    val imageUrl = docData?.getValue("imageUrl").toString()
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child(docData?.getValue("imageUrl").toString())
+                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
+                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+
+                    //add the item to local cache
+                    val name = docData?.getValue("name").toString()
+                    val price = docData?.getValue("price").toString().toDouble()
+                    val quantity = docData?.getValue("quantity").toString().toInt()
+                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                }
+                _items.value = Inventory_Items.item_list.toList()
+
+            } else if (internet_avaible && (Inventory_Items.update_item_list.size != 0)){
+                for(item in Inventory_Items.update_item_list){
+                    addItemToFirestore(item.name, item.price, item.quantity, item.imageBitmap)
+                }
+
+                //remove all the item in the local cache
+                Inventory_Items.update_item_list = mutableListOf<Inventory_Item>()
+                Inventory_Items.item_list = mutableListOf<Inventory_Item>()
+
+                db = Firebase.firestore
+                storage = Firebase.storage
+                val documents = db.collection("inventory")
+                    .whereEqualTo("userId", currentUserId)
+                    .get()
+                    .await()
+
+                //load all the items from database to local cache
+                for (i in 0 until documents.size() step 1) {
+                    var document = documents.documents[i]
+                    val docData = document.data
+                    val imageUrl = docData?.getValue("imageUrl").toString()
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child(docData?.getValue("imageUrl").toString())
+                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
+                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+
+                    //add the item to local cache
+                    val name = docData?.getValue("name").toString()
+                    val price = docData?.getValue("price").toString().toDouble()
+                    val quantity = docData?.getValue("quantity").toString().toInt()
+                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                }
+                _items.value = Inventory_Items.item_list.toList()
+
+            } else if (!internet_avaible){
+                _items.value = Inventory_Items.item_list.toList()
+
+            } else {
+                //remove all the item in the local cache
+                Inventory_Items.item_list = mutableListOf<Inventory_Item>()
+
+                val documents = db.collection("inventory")
+                    .whereEqualTo("userId", currentUserId)
+                    .get()
+                    .await()
+
+                //load all the items from database to local cache
+                for (i in 0 until documents.size() step 1) {
+                    var document = documents.documents[i]
+                    val docData = document.data
+                    val imageUrl = docData?.getValue("imageUrl").toString()
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child(docData?.getValue("imageUrl").toString())
+                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
+                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+
+                    //add the item to local cache
+                    val name = docData?.getValue("name").toString()
+                    val price = docData?.getValue("price").toString().toDouble()
+                    val quantity = docData?.getValue("quantity").toString().toInt()
+                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                }
+                _items.value = Inventory_Items.item_list.toList()
+            }
+
+        } catch (exception: Exception) {
+            isLoading.emit(false)
+
+        } finally {
+            isLoading.emit(false)
+        }
+    }
+
+
+    fun onSearchTextChange(text: String){
+        _searchText.value = text
     }
 
     private fun imageViewToBitmap(imageView: ImageView): Bitmap {
@@ -159,57 +286,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         drawable.draw(canvas)
         return bitmap
     }
-
-    suspend fun loadItems() {
-        if(isLoading.value == true) {
-            return
-        }
-        isLoading.emit(true) // Start loading
-        try {
-            if (isNetworkAvailable()) {
-                //remove all the item in the local cache
-                Inventory_Items.item_list = mutableListOf<Inventory_Item>()
-
-                val documents = db.collection("inventory")
-                    .whereEqualTo("userId", currentUserId)
-                    .get()
-                    .await()
-                Log.d("TAGdocsize,", documents.size().toString());
-
-                //load all the items from database to local cache
-                for (i in 0 until documents.size() step 1) {
-                    var document = documents.documents[i]
-                    Log.d("TAGdoc,", "1");
-                    val docData = document.data
-                    val imageUrl = docData?.getValue("imageUrl").toString()
-                    val storageRef = storage.reference
-                    val imageRef = storageRef.child(docData?.getValue("imageUrl").toString())
-                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
-                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-
-                    //add the item to local cache
-                    val name = docData?.getValue("name").toString()
-                    val price = docData?.getValue("price").toString().toDouble()
-                    val quantity = docData?.getValue("quantity").toString().toInt()
-                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    //imageBitmap = Bitmap.createBitmap(100, 200, Bitmap.Config.ARGB_8888)
-                    Log.d("TAGdoc123,", "quantity");
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
-                }
-                _items.emit(Inventory_Items.item_list.toList())
-            } else {
-                //if there is no internet connection, it will
-            }
-        } catch (exception: Exception) {
-            isLoading.emit(false)
-        } finally {
-            isLoading.emit(false)
-        }
-    }
-
-    fun onSearchTextChange(text: String){
-        _searchText.value = text
-    }
 }
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalGlideComposeApi::class)
@@ -220,16 +296,15 @@ fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier){
     SideEffect {
         permissionState.launchPermissionRequest()
     }
-
+    /*
     val speechRecognizerLauncher = rememberLauncherForActivityResult(
         contract = SpeechRecognizerContract(),
         onResult = {
             //make DB call to update inventory for specific item
             // add toast message to show updated item value
             Log.d("TAG,", "val is: " + it.toString());
-            //#viewModel.changeTextValue(it.toString())
         }
-    )
+    )*/
 
     Card(
         modifier = modifier
@@ -237,7 +312,7 @@ fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier){
             .height(230.dp)
             .clickable {
                 if (permissionState.status.isGranted) {
-                    speechRecognizerLauncher.launch(Unit)
+                   // speechRecognizerLauncher.launch(Unit)
                 } else
                     permissionState.launchPermissionRequest()
             }
@@ -271,9 +346,40 @@ fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier){
     }
 }
 
+fun addItemToFirestore(name:String, price:Double, quantity:Int, imageBitmap: Bitmap) {
+    // add captured image to Firestore Storage
+    val storage = Firebase.storage
+    val storageRef = storage.reference
+    val imagesRef = storageRef.child("images/crops")
+    val fileName = "image_${System.currentTimeMillis()}.png"
+    val imageRef = imagesRef.child(fileName)
+    val baos = ByteArrayOutputStream()
+    imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
+    val imageData = baos.toByteArray()
+
+    val uploadTask = imageRef.putBytes(imageData)
+    uploadTask.addOnCompleteListener { task ->
+        if (task.isSuccessful) {
+            // Image uploaded successfully
+            // Create a new doc in the inventory collection
+            val db = Firebase.firestore
+            val inventoryColRef = db.collection("inventory");
+            val data = hashMapOf(
+                "name" to name,
+                "quantity" to quantity,
+                "price" to price,
+                "userId" to FirebaseAuth.getInstance().currentUser?.uid.toString(),
+                "imageUrl" to imageRef.path.toString()
+            )
+            inventoryColRef.add(data);
+        }
+    }
+    Log.d("TAG,", "option 2_2");
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ExtendedFABComponent() {
+private fun ExtendedFABComponent(viewModel: MainViewModel) {
     val showDialog = remember { mutableStateOf(false) }
     val fieldMissingDialog = remember { mutableStateOf(false) }
     var capturedImage = remember { mutableStateOf<Bitmap?>(null) }
@@ -293,41 +399,6 @@ private fun ExtendedFABComponent() {
         }
     }
     val activity = LocalContext.current as Activity
-
-    fun addItemToFirestore(imageBitmap: Bitmap) {
-        // add captured image to Firestore Storage
-        val storage = Firebase.storage
-        val storageRef = storage.reference
-        val imagesRef = storageRef.child("images/crops")
-        val fileName = "image_${System.currentTimeMillis()}.png"
-        val imageRef = imagesRef.child(fileName)
-        val baos = ByteArrayOutputStream()
-        imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
-        val imageData = baos.toByteArray()
-
-        val uploadTask = imageRef.putBytes(imageData)
-        uploadTask.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                // Image uploaded successfully
-                // Create a new doc in the inventory collection
-                val db = Firebase.firestore
-                val inventoryColRef = db.collection("inventory");
-                val data = hashMapOf(
-                    "name" to itemName.value,
-                    "quantity" to itemQuantity.value,
-                    "price" to itemPrice.value,
-                    "userId" to FirebaseAuth.getInstance().currentUser?.uid.toString(),
-                    "imageUrl" to imageRef.path.toString()
-                )
-                inventoryColRef.add(data);
-            }
-
-            // clear input values
-            itemName.value = ""
-            itemQuantity.value = ""
-            itemPrice.value = ""
-        }
-    }
 
     //pop up a dialog telling user that some fields are missing
     if (fieldMissingDialog.value) {
@@ -359,10 +430,12 @@ private fun ExtendedFABComponent() {
         val context = LocalContext.current
         AlertDialog(
             onDismissRequest = { showDialog.value = false },
+
             title = { Text("Add Item to inventory",
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.DarkGray)},
+
             text = {
                 Column(modifier = Modifier.padding(horizontal = 10.dp)) {
                     if(capturedImage.value == null) {
@@ -466,6 +539,7 @@ private fun ExtendedFABComponent() {
 
                 }
             },
+
             confirmButton = {
                 Button(onClick = {
                     message.value = checkMissingField(itemName.value, itemQuantity.value, itemPrice.value, capturedImage.value)
@@ -474,7 +548,13 @@ private fun ExtendedFABComponent() {
                     if(message.value == "Fields missing valid entries: ") {
                         // Upload the captured image to Firestore Storage
                         capturedImage.value?.let { imageBitmap ->
-                            addItemToFirestore(imageBitmap)
+                            viewModel.isNetworkAvailable()
+                            Inventory_Items.addItem(itemName.value, itemPrice.value.toDouble(), itemQuantity.value.toInt(), capturedImage.value as Bitmap)
+                            Inventory_Items.update_item_list.add(Inventory_Item(itemName.value, itemPrice.value.toDouble(), itemQuantity.value.toInt(), capturedImage.value as Bitmap))
+                            CoroutineScope(Dispatchers.Main).launch {
+                                Log.d("TAG,", "update new item");
+                                viewModel.loadItems()
+                            }
                         }
                         // Close the dialog
                         showDialog.value = false
@@ -575,9 +655,9 @@ fun InventoryScreen(){
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 128.dp)
             ) {
-                items(theFoodItems.size) { item ->
+                items(viewModel.items.value.size) { item ->
                     ItemCard(
-                        item = theFoodItems.get(item),
+                        item = viewModel.items.value.get(item),
                         modifier = Modifier.padding(8.dp)
                     )
                 }
@@ -585,7 +665,7 @@ fun InventoryScreen(){
         }
 
     }
-    ExtendedFABComponent()
+    ExtendedFABComponent(viewModel)
 }
 
 @Preview(showBackground = true)
