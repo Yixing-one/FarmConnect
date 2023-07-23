@@ -91,6 +91,12 @@ dependencies {
 
     // Also add the dependency for the Google Play services library and specify its version
     implementation 'com.google.android.gms:play-services-auth:20.5.0'
+    // Declare the dependency for the Cloud Firestore library
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    // Add the dependency for the Cloud Storage library
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation("com.google.firebase:firebase-storage-ktx")
 
 
     def lifecycle_version = "2.5.1"
@@ -98,6 +104,7 @@ dependencies {
     // ViewModel
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version"
 
+//    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:1.0.0-alpha07"
 
     //permission handling in compose
     implementation 'com.google.accompanist:accompanist-permissions:0.24.11-rc'

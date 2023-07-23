@@ -30,11 +30,13 @@ import androidx.navigation.compose.rememberNavController
 import com.example.farmconnect.R
 import com.example.farmconnect.ui.charity.CharityModeScreen
 import com.example.farmconnect.ui.farmer.FarmModeScreen
+import com.example.farmconnect.ui.farmer.PostScreen
 import com.example.farmconnect.ui.farmer.FinanceStatsScreen
 import com.example.farmconnect.ui.farmer.InventoryScreen
 import com.example.farmconnect.ui.farmer.MarketplaceScreen
 import com.example.farmconnect.ui.SettingsScreen
 import com.example.farmconnect.ui.farmer.MainViewModel
+import com.example.farmconnect.ui.farmer.PostScreen
 import com.example.farmconnect.ui.shopping.CartScreen
 import com.example.farmconnect.ui.shopping.CartViewModel
 import com.example.farmconnect.ui.shopping.ShoppingCenterScreen
@@ -113,6 +115,7 @@ fun App() {
                     composable(route = Screens.Farm.name){
                         FarmModeScreen(navController)
                     }
+                    //CHANGE THIS BACKK??!?@?@>#"!@L$!
                     composable(route = Screens.Inventory.name){
                         InventoryScreen()
                     }
@@ -121,6 +124,9 @@ fun App() {
                     }
                     composable(route = Screens.Marketplace.name){
                         MarketplaceScreen()
+                    }
+                    composable(route = Screens.Donate.name){
+                        PostScreen()
                     }
 //                  Charity mode:
                     composable(route = Screens.Charity.name){
