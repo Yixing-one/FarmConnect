@@ -210,7 +210,7 @@ fun AddPostingsMarketItemCard(item: Inventory_Item, modifier: Modifier = Modifie
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(7.5.dp)
+                    .padding(8.dp)
             ) {
                 Text(text = "Add posting")
             }
