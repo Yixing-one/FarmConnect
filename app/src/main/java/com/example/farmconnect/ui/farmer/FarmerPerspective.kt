@@ -3,7 +3,14 @@ package com.example.farmconnect.ui.farmer
 
 
 import android.Manifest
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Picture
+import android.graphics.drawable.BitmapDrawable
+import android.os.Build
 import android.util.Log
+import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -18,8 +25,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.annotation.DrawableRes
+//import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+//import androidx.compose.foundation.gestures.ModifierLocalScrollableContainerProvider.value
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
@@ -34,6 +43,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,19 +58,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.farmconnect.data.allPosts
+//import com.example.farmconnect.data.allPosts
 import com.example.farmconnect.ui.charity.Post
-
-import com.example.farmconnect.data.allItems
 import com.example.farmconnect.data.postedItems
-
-//import com.example.farmconnect.R
-
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.SpeechRecognizerContract
+import com.example.farmconnect.data.Inventory_Item
+import com.example.farmconnect.data.Inventory_Items
 import com.example.farmconnect.data.Item
 import com.example.farmconnect.ui.charity.PostCard
 import com.example.farmconnect.ui.theme.darkGreen
@@ -68,8 +76,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.delay
-
-
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -79,6 +85,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.count
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -87,6 +94,8 @@ import kotlinx.coroutines.tasks.await
 
 class PostViewModel : ViewModel() {
     private val db = Firebase.firestore
+    private val storage = Firebase.storage
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
 
     suspend fun addPost(post: Post) {
         try {
@@ -94,15 +103,78 @@ class PostViewModel : ViewModel() {
         } catch (e: Exception) {
         }
     }
-}
+
+    val _items = MutableStateFlow<List<Inventory_Item>>(listOf())
 
 
-val inventoryDatabase = mutableStateMapOf<Int, Int>().apply {
-//    allItems.forEachIndexed { index, item ->
-//        this[index + 1] = item.quantity
-//    }
-    postedItems.forEachIndexed { index, item ->
-        this[index + 1] = item.quantity
+    val isLoading = MutableStateFlow(true)
+    init {
+        viewModelScope.launch {
+            loadItems()
+        }
+    }
+    private fun imageViewToBitmap(imageView: ImageView): Bitmap {
+        val drawable = imageView.drawable
+        if (drawable is BitmapDrawable) {
+            return drawable.bitmap
+        }
+
+        // Create a new bitmap and canvas, and draw the drawable onto the canvas
+        val bitmap = Bitmap.createBitmap(imageView.width, imageView.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+    suspend fun loadItems() {
+        isLoading.emit(true) // Start loading
+        try {
+                //remove all the item in the local cache
+//                Inventory_Items.item_list = mutableListOf<Inventory_Item>()
+
+                val documents = db.collection("inventory")
+                    .whereEqualTo("userId", currentUserId)
+                    .get()
+                    .await()
+
+            val marketItems = ArrayList<Inventory_Item>()
+
+                //load all the items from database to local cache
+                for (document in documents) {
+                    val docData = document.data
+                    val imageUrl = docData.getValue("imageUrl").toString()
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
+                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+
+                    //add the item to local cache
+                    val name = docData.getValue("name").toString()
+                    val price = docData.getValue("price").toString().toDouble()
+                    val quantity = docData.getValue("quantity").toString().toInt()
+                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    Inventory_Items.addItem(document.id, name, price, quantity, imageBitmap)
+                }
+//            _items.emit(Inventory_Items.item_list.toList())
+
+            _items.emit(marketItems.toList())
+
+        } catch (exception: Exception) {
+            isLoading.emit(false)
+        } finally {
+            isLoading.emit(false)
+        }
+    }
+
+    suspend fun deductQuanity(documentID: String, deductedAmount: Int){
+        val inventoryDocuments = db.collection("inventory")
+
+        if(documentID != null) {
+            val docData = inventoryDocuments.document(documentID).get().await().data;
+            var quantity = docData?.getValue("quantity").toString().toInt()
+            quantity -= deductedAmount
+            inventoryDocuments.document(documentID).update("quantity", quantity).await();
+        }
     }
 }
 
@@ -146,12 +218,13 @@ fun DonationItemCard(item: Item, modifier: Modifier = Modifier){
 @Composable
 fun PostScreen() {
     val postViewModel: PostViewModel = viewModel()
-    val selectedItems = remember { mutableStateListOf<Pair<Item, Int>>() }
+    val selectedItems = remember { mutableStateListOf<Pair<Inventory_Item, Int>>() }
     val posts = remember { mutableStateListOf<Post>() }
     var showError by remember { mutableStateOf(false) }
     var postIdCounter by remember { mutableStateOf(1) }
 
-//    val postViewModel: PostViewModel = viewModel()
+    val thePostItems by viewModel.items.collectAsState()
+
 
     LaunchedEffect(showError) {
         if (showError) {
@@ -190,7 +263,7 @@ fun PostScreen() {
             text = "Select items:",
             style = MaterialTheme.typography.bodyLarge,
         )
-        
+
         val lazyListState = rememberLazyListState()
         LazyColumn(
             modifier = Modifier
@@ -199,8 +272,8 @@ fun PostScreen() {
                 .height(210.dp),
             state = lazyListState
         ) {
-            items(postedItems.size) { index ->
-                val item = postedItems[index]
+            items(thePostItems.size) { item ->
+                val inventoryItem = thePostItems.get(item)
                 val selectedQuantity = remember { mutableStateOf("") }
 
                 Row(
@@ -209,7 +282,7 @@ fun PostScreen() {
                 ) {
                     Card(
                         onClick = {
-                            val selectedItem = item
+                            val selectedItem = inventoryItem
                             if (selectedItems.any { it.first == selectedItem }) {
                                 selectedItems.removeAll { it.first == selectedItem }
                             } else {
@@ -225,21 +298,21 @@ fun PostScreen() {
                     ) {
                         Row(){
                             Image(
-                                painter = painterResource(id = item.imageId),
+                                painter = rememberAsyncImagePainter(model = inventoryItem.imageBitmap),
                                 contentDescription = "image",
                                 modifier = Modifier
-                                    .width(100.dp)
-                                    .height(100.dp),
+                                    .fillMaxWidth()
+                                    .height(120.dp),
                                 contentScale = ContentScale.Crop
                             )
                             Column(){
                                 Text(
-                                    text = "${item.name}",
+                                    text = "${inventoryItem.name}",
                                     modifier = Modifier.padding(start = 5.dp, end = 5.dp, top = 5.dp, bottom = 5.dp),
                                     style = MaterialTheme.typography.titleMedium,
                                 )
                                 Text(
-                                    text = "${item.quantity} lb",
+                                    text = "${inventoryItem.quantity} lb",
                                     modifier = Modifier.padding(start = 5.dp, end = 5.dp, top = 5.dp, bottom = 5.dp),
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
@@ -255,7 +328,7 @@ fun PostScreen() {
                         label = { Text(
                             text = "Amount (lbs)",
                             style = MaterialTheme.typography.bodySmall)
-                                },
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
@@ -288,7 +361,7 @@ fun PostScreen() {
             onClick = {
                 if (selectedItems.isNotEmpty() && charityNameState.value.isNotBlank() && charityLocationState.value.isNotBlank()) {
                     val newPosts = selectedItems.mapNotNull { (selectedItem, selectedQuantity) ->
-                        val availableQuantity = inventoryDatabase[selectedItem.id] ?: 0
+                        val availableQuantity = postViewModel._items.value.find { it.documentID == selectedItem.documentID }?.quantity ?: 0
                         if (selectedQuantity <= availableQuantity) {
                             selectedItem to selectedQuantity
                         } else {
@@ -296,21 +369,21 @@ fun PostScreen() {
                         }
                     }
                     if (newPosts.isNotEmpty()) {
-                        newPosts.forEach { (item, quantity) ->
-                            inventoryDatabase[item.id] = inventoryDatabase[item.id]?.minus(quantity) ?: 0
-                        }
-
-                        val post = Post(
-                            postIdCounter++,
-                            charityNameState.value,
-                            charityLocationState.value,
-                            287.4,
-                            newPosts[0].first.name,
-                            newPosts[0].second.toDouble(),
-                            newPosts[0].first.imageId
-                        )
-
                         postViewModel.viewModelScope.launch {
+                            newPosts.forEach { (item, quantity) ->
+                                postViewModel.deductQuanity(item.documentID, quantity) // Deduct quantity from the 'inventory' collection database
+                            }
+
+                            val post = Post(
+//                                postIdCounter++,
+                                charityNameState.value,
+                                charityLocationState.value,
+                                287.4,
+                                newPosts[0].first.name,
+                                newPosts[0].second.toDouble(),
+                                newPosts[0].first.imageBitmap
+//                                Bitmap.createBitmap(Picture())
+                            )
                             postViewModel.addPost(post)
                         }
 
@@ -336,17 +409,17 @@ fun PostScreen() {
             items(posts) { post ->
                 Row {
                     Text(
-                        text = "Post ID: ${post.postId}",
+                        text = "Post ID:",
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
-                            Text(
-                                text = "${post.item_name}: ${post.item_amount}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
+                        Text(
+                            text = "${post.item_name}: ${post.item_amount}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
                     }
                 }
                 Text(
@@ -381,13 +454,13 @@ fun PostScreen() {
                 containerColor = Color(250, 142, 142)
             )
         }
-        }
     }
+}
 
 
+//@RequiresApi(Build.VERSION_CODES.P)
 @Preview
 @Composable
 fun PreviewPostScreen() {
     PostScreen()
 }
-

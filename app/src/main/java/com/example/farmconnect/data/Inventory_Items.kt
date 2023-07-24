@@ -3,6 +3,7 @@ package com.example.farmconnect.data
 import android.graphics.Bitmap
 
 data class Inventory_Item(
+    val documentID: String,
     val name: String,
     val price: Double,
     val quantity: Int,
@@ -21,9 +22,10 @@ data class Inventory_Item(
 object Inventory_Items {
     var item_list = mutableListOf<Inventory_Item>()
 
-    fun addItem(name: String, price: Double, quantity:Int, imageBitmap:Bitmap) {
+    fun addItem(documentID: String, name: String, price: Double, quantity:Int, imageBitmap:Bitmap) {
         item_list.add(
             Inventory_Item(
+                documentID = documentID,
                 name = name,
                 price = price,
                 quantity = quantity,

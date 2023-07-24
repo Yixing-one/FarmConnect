@@ -1,5 +1,7 @@
 package com.example.farmconnect.ui.charity
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -51,27 +53,30 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import com.example.farmconnect.data.allPosts
+import coil.compose.rememberAsyncImagePainter
+import com.example.farmconnect.data.Inventory_Item
+import com.example.farmconnect.data.Inventory_Items
+import com.example.farmconnect.ui.farmer.MarketPlaceItem
+//import com.example.farmconnect.data.allPosts
 import com.example.farmconnect.ui.theme.darkGreen
-
-
-//    val charity_name: String,
-//    val charity_location: String,
-//    val charity_distance: Double,
-//    val item_name: String,
-//    val item_amount: Double,
-//    @DrawableRes
-//    val imageId: Int
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 data class Post(
-    val postId: Int,
+//    val postId: Int,
     val charity_name: String,
     val charity_location: String,
     val charity_distance: Double,
     val item_name: String,
     val item_amount: Double,
-    @DrawableRes
-    val imageId: Int,
+//    @DrawableRes
+//    val imageId: Int,
+    val imageBitmap: Bitmap,
     var isClaimed: Boolean = false
 ){
     fun doesMatchSearchQuery(query: String): Boolean {
@@ -86,29 +91,103 @@ data class Post(
 
 
 class FarmViewModel: ViewModel() {
+    private val db = Firebase.firestore
+    private val storage = Firebase.storage
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
+
     private val _searchText = MutableStateFlow("")
     val searchText = _searchText.asStateFlow()
 
     private val _isSearching = MutableStateFlow(false)
     val isSearching = _isSearching.asStateFlow()
 
-    private val _posts = MutableStateFlow(allPosts)
-    val posts = searchText
-        .combine(_posts){ text, posts ->
-            if(text.isBlank()){
-                posts
-            }
-            else{
-                posts.filter{
+//    private val _posts = MutableStateFlow(allPosts)
+    val _posts = MutableStateFlow<List<Post>>(listOf())
+    val posts: StateFlow<List<Post>> = searchText
+        .combine(_posts) { text, items ->
+            if (text.isBlank()) {
+                items
+            } else {
+                items.filter {
                     it.doesMatchSearchQuery(text)
                 }
             }
         }
         .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            _posts.value
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(),
+            initialValue = _posts.value
         )
+
+//    val posts = searchText
+//        .combine(_posts){ text, posts ->
+//            if(text.isBlank()){
+//                posts
+//            }
+//            else{
+//                posts.filter{
+//                    it.doesMatchSearchQuery(text)
+//                }
+//            }
+//        }
+//        .stateIn(
+//            viewModelScope,
+//            SharingStarted.WhileSubscribed(5000),
+//            _posts.value
+//        )
+    val isLoading = MutableStateFlow(true)
+    init {
+        viewModelScope.launch {
+            loadItems()
+        }
+    }
+
+    suspend fun loadItems() {
+        isLoading.emit(true) // Start loading
+        try {
+            //remove all the item in the local cache
+//            Post.item_list = mutableListOf<Inventory_Item>()
+
+            val documents = db.collection("charityPosts")
+                .whereEqualTo("userId", currentUserId)
+                .get()
+                .await()
+
+            val marketItems = ArrayList<Post>()
+
+
+            //load all the items from database to local cache
+            for (document in documents) {
+                val docData = document.data
+                val storageRef = storage.reference
+                val imageRef = storageRef.child(docData.getValue("imageId").toString())
+
+                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
+                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+                marketItems.add(
+                    Post(
+//                        documentId = document.id,
+                        charity_name = docData.getValue("charity_name").toString(),
+                        charity_location = docData.getValue("charity_location").toString(),
+                        charity_distance = docData.getValue("charity_distance").toString().toDouble(),
+                        item_name = docData.getValue("item_name").toString(),
+                        item_amount = docData.getValue("item_amount").toString().toDouble(),
+                        imageBitmap = imageBitmap
+                    )
+                )
+            }
+            _posts.emit(marketItems.toList())
+//            _posts.emit(Inventory_Items.item_list.toList())
+
+        } catch (exception: Exception) {
+            isLoading.emit(false)
+        } finally {
+            isLoading.emit(false)
+        }
+    }
+
 
     fun onSearchTextChange(text: String){
         _searchText.value = text
@@ -129,14 +208,12 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
-            val image: Painter = painterResource(id = post.imageId)
             Image(
+                painter = rememberAsyncImagePainter(model = post.imageBitmap),
+                contentDescription = "image",
                 modifier = Modifier
-                    .size(80.dp, 80.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-                painter = image,
-                alignment = Alignment.CenterStart,
-                contentDescription = "",
+                    .fillMaxWidth()
+                    .height(120.dp),
                 contentScale = ContentScale.Crop
             )
 
@@ -148,7 +225,6 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 0.dp),
                     style = TextStyle(
                         fontSize = 21.sp,
-//                        color = Color.Black,
                         fontWeight = FontWeight.Bold
                     )
                 )
@@ -160,7 +236,6 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                     modifier = Modifier.padding(0.dp, 0.dp, 12.dp, 0.dp),
                     style = TextStyle(
                         fontSize = 15.sp,
-//                        color = Color.Blue,
                         fontWeight = FontWeight.Bold
                     )
                 )
@@ -172,7 +247,6 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                     modifier = Modifier.padding(0.dp, 0.dp, 19.dp, 0.dp),
                     style = TextStyle(
                         fontSize = 12.sp,
-//                        color = Color.DarkGray,
                         fontWeight = FontWeight.Bold
                     )
                 )
@@ -201,7 +275,6 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                         onClick = {
                             post.isClaimed = true
                         },
-//                modifier = Modifier.padding(8.dp),
                         enabled = !post.isClaimed
                     ) {
                         Text(text = if (post.isClaimed) "Claimed" else "Claim")
@@ -209,16 +282,6 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                 }
 
             }
-
-//            Button(
-//                onClick = {
-//                    post.isClaimed = true
-//                },
-////                modifier = Modifier.padding(8.dp),
-//                enabled = !post.isClaimed
-//            ) {
-//                Text(text = if (post.isClaimed) "Claimed" else "Claim")
-//            }
         }
     }
 }
@@ -227,7 +290,7 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
 @Composable
 fun CharityModeScreen(){
     val viewModel = viewModel<FarmViewModel>()
-    val CharityPosts by viewModel.posts.collectAsState()
+    val charityPosts by viewModel.posts.collectAsState()
     val searchText by viewModel.searchText.collectAsState()
 
     Column(
@@ -264,19 +327,14 @@ fun CharityModeScreen(){
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .height(600.dp)
-        ){
-            LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)){
-                items(CharityPosts.size){item ->
-                    PostCard(
-                        post = CharityPosts.get(item),
-                        modifier = Modifier.padding(8.dp)
-                    )
-                }
+        Text("YOOO")
+
+        LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)){
+            items(charityPosts.size){item ->
+                PostCard(
+                    post = charityPosts.get(item),
+                    modifier = Modifier.padding(8.dp)
+                )
             }
         }
 
@@ -290,20 +348,6 @@ fun CharityModeScreen(){
                 .width(85.dp),
             contentScale = ContentScale.Fit
         )
-
-        Row(verticalAlignment = Alignment.Bottom) {
-            Spacer(modifier = Modifier.width(150.dp))
-            Text(
-                text = "Tell us what you need !",
-                modifier = Modifier.padding(8.dp, 3.dp, 5.dp, 0.dp),
-                style = TextStyle(
-                    fontSize = 50.sp,
-                    color = Color.Blue,
-                    fontWeight = FontWeight.Bold
-                )
-            )
-        }
-
     }
 }
 

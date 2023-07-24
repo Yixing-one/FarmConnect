@@ -182,7 +182,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val price = docData.getValue("price").toString().toDouble()
                     val quantity = docData.getValue("quantity").toString().toInt()
                     val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                    Inventory_Items.addItem(document.id, name, price, quantity, imageBitmap)
                 }
             }
             _items.emit(Inventory_Items.item_list.toList())
