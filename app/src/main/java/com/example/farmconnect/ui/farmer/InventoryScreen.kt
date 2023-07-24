@@ -204,7 +204,7 @@ fun ItemCard(item: Item, viewModel: MainViewModel,modifier: Modifier = Modifier)
             println(result)
             println("dsfhkghifshjgiosdgiosjgdfiosjgdiodsjgiosdjgiodjfgiosdgj")
             val spokenText = result?.get(0)
-            val increment = spokenText?.toInt()
+            val increment = spokenText!!.split(" ")[0].toInt()
             if (increment != null) {
                 viewModel.updateInventory(itemName = item.name, increment = increment)
             };
