@@ -194,21 +194,21 @@ fun MarketItemCard(item: MarketPlaceItem, modifier: Modifier = Modifier){
                 style = MaterialTheme.typography.bodySmall,
             )
             if(item.quantitySold != 0){
-                Image(
-                    painter = painterResource(R.drawable.plus_sign),
-                    contentDescription = "image",
-                    modifier = Modifier
-                        .width(40.dp)
-                        .height(40.dp)
-                        .padding(5.dp, 0.dp),
-                    contentScale = ContentScale.Fit
-                )
+//                Image(
+//                    painter = painterResource(R.drawable.plus_sign),
+//                    contentDescription = "image",
+//                    modifier = Modifier
+//                        .width(40.dp)
+//                        .height(40.dp)
+//                        .padding(5.dp, 0.dp),
+//                    contentScale = ContentScale.Fit
+//                )
                 Text(
                     text = "Sold ${item.quantitySold} lb",
-                    modifier = Modifier.padding(start = 0.dp, end = 0.dp, top = 0.dp, bottom = 0.dp),
+                    modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
                     style = TextStyle(
                         fontSize = 15.sp,
-                        color = Color.Blue,
+//                        color = Color.Blue,
                         fontWeight = FontWeight.Bold
                     )
                 )
@@ -278,48 +278,48 @@ fun MarketScreen(navController: NavController){
         }
         Spacer(modifier = Modifier.height(150.dp))
 
-        Row(verticalAlignment = Alignment.Bottom) {
-//            Spacer(modifier = Modifier.width(150.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                ) {
-                    // Your other content here...
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // The two Text elements in the Column
-                    Text(
-                        text = "Total earning on June 26:",
-                        style = TextStyle(
-                            fontSize = 20.sp,
-                            color = Color.Blue,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp, 3.dp, 5.dp, 0.dp),
-                    )
-
-                    Text(
-                        text = "   610 CAD",
-                        style = TextStyle(
-                            fontSize = 20.sp,
-                            color = Color.Cyan,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp, 3.dp, 5.dp, 0.dp),
-                    )
-                }
-            }
-        }
+//        Row(verticalAlignment = Alignment.Bottom) {
+////            Spacer(modifier = Modifier.width(150.dp))
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//            ) {
+//                Column(
+//                    modifier = Modifier
+//                        .fillMaxSize()
+//                        .padding(16.dp)
+//                ) {
+//                    // Your other content here...
+//
+//                    Spacer(modifier = Modifier.height(10.dp))
+//
+//                    // The two Text elements in the Column
+////                    Text(
+////                        text = "Total earning on June 26:",
+////                        style = TextStyle(
+////                            fontSize = 20.sp,
+////                            color = Color.Blue,
+////                            fontWeight = FontWeight.Bold
+////                        ),
+////                        modifier = Modifier
+////                            .fillMaxWidth()
+////                            .padding(8.dp, 3.dp, 5.dp, 0.dp),
+////                    )
+////
+////                    Text(
+////                        text = "   610 CAD",
+////                        style = TextStyle(
+////                            fontSize = 20.sp,
+////                            color = Color.Cyan,
+////                            fontWeight = FontWeight.Bold
+////                        ),
+////                        modifier = Modifier
+////                            .fillMaxWidth()
+////                            .padding(8.dp, 3.dp, 5.dp, 0.dp),
+////                    )
+//                }
+//            }
+//        }
     }
 
 
