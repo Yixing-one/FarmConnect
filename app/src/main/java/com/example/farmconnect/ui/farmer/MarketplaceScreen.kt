@@ -1,7 +1,9 @@
 package com.example.farmconnect.ui.farmer
 
+import android.content.ContentValues.TAG
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -92,6 +94,7 @@ class MarketPlaceViewModel: ViewModel() {
 
     init {
         viewModelScope.launch {
+            Log.d(TAG, "Launch")
             loadItems()
         }
     }

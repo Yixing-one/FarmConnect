@@ -102,7 +102,7 @@ import kotlinx.coroutines.*
 
 lateinit var cur_context: Context
 lateinit var viewModel: MainViewModel
-var internet_avaible = false
+var internet_available = false
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -148,15 +148,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val capabilities =
                 connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
             if (capabilities != null) {
-                internet_avaible = true
+                internet_available = true
                 return
             }
         }
-        internet_avaible = false
+        internet_available = false
     }
 
     suspend fun loadItems() {
-        internet_avaible = false
+        internet_available = false
         isNetworkAvailable()
 
         if(isLoading.value == true) {
@@ -168,7 +168,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             db = Firebase.firestore
             storage = Firebase.storage
 
-            if(internet_avaible && (Inventory_Items.item_list.size == 0) && (Inventory_Items.update_item_list.size == 0)) {
+            if(internet_available && (Inventory_Items.item_list.size == 0) && (Inventory_Items.update_item_list.size == 0)) {
                 //remove all the item in the local cache
                 Inventory_Items.item_list = mutableListOf<Inventory_Item>()
 
@@ -197,7 +197,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 _items.emit(Inventory_Items.item_list)
 
-            } else if (internet_avaible && (Inventory_Items.update_item_list.size != 0)){
+            } else if (internet_available && (Inventory_Items.update_item_list.size != 0)){
                 for(item in Inventory_Items.update_item_list){
                     addItemToFirestore(item.name, item.price, item.quantity, item.imageBitmap)
                 }
@@ -233,7 +233,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 _items.value = Inventory_Items.item_list.toList()
 
-            } else if (!internet_avaible){
+            } else if (!internet_available){
                 _items.value = Inventory_Items.item_list.toList()
 
             } else {
