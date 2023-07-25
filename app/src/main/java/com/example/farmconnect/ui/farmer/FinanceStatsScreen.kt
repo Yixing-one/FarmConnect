@@ -62,23 +62,28 @@ class FinanceViewModel: ViewModel() {
     }
 
     private suspend fun loadItems() {
-        val financeItems = db.collection("finance")
-            .whereEqualTo("userId", currentUserId)
-            .get()
-            .await().documents[0].data?.getValue("items") as List<HashMap<*,*>>
+        try{
+            val financeItems = db.collection("finance")
+                .whereEqualTo("userId", currentUserId)
+                .get()
+                .await().documents[0].data?.getValue("items") as List<HashMap<*,*>>
 
-        val itemsList = mutableListOf<TableItem>()
-        for (item in financeItems) {
-            val item = TableItem(
-                name = item["name"].toString(),
-                quantitySold = (item["quantitySold"] as Long).toDouble(),
-                dateSold = item["dateSold"] as? Timestamp ?: Timestamp.now(),
-                revenue = item["revenue"] as? Double ?: 0.0
-            )
-            itemsList.add(item)
+            val itemsList = mutableListOf<TableItem>()
+            for (item in financeItems) {
+                val item = TableItem(
+                    name = item["name"].toString(),
+                    quantitySold = (item["quantitySold"] as Long).toDouble(),
+                    dateSold = item["dateSold"] as? Timestamp ?: Timestamp.now(),
+                    revenue = item["revenue"] as? Double ?: 0.0
+                )
+                itemsList.add(item)
+            }
+
+            _items.emit(itemsList)
+
+        } catch (e: Exception) {
+            Log.d(TAG, e.message.toString())
         }
-
-        _items.emit(itemsList)
     }
 }
 
@@ -210,7 +215,7 @@ fun FinanceStatsScreen(){
         }
         return total
     }
-
+    Log.d(TAG, financeItems.size.toString())
     if (financeItems.isNotEmpty()) {
         try {
             val firstItem = financeItems[0]
