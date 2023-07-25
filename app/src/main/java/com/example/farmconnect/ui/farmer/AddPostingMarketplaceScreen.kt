@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.net.ConnectivityManager
+import android.util.Log
 import android.widget.ImageView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -40,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -72,6 +74,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.io.ByteArrayOutputStream
+lateinit var cur_context_2: Context
+
 class AddPostingViewModel() : ViewModel() {
 
     private val db = Firebase.firestore
@@ -101,7 +106,8 @@ class AddPostingViewModel() : ViewModel() {
             initialValue = _items.value
         )
 
-    val isLoading = MutableStateFlow(true)
+    val isLoading = MutableStateFlow(false)
+    var internet_available = false
 
     init {
         viewModelScope.launch {
@@ -109,40 +115,39 @@ class AddPostingViewModel() : ViewModel() {
         }
     }
 
-    private fun isNetworkAvailable(): Boolean {
+    fun addMarketplaceItem(name: String, price: Double, quantity: Int, imageBitmap: Bitmap) {
+        viewModelScope.launch {
+            addMarketplaceItemToFirestore(name, price, quantity, imageBitmap)
+        }
+    }
+
+    fun isNetworkAvailable() {
         val connectivityManager =
-            cur_context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            cur_context_2.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (connectivityManager != null) {
             val capabilities =
                 connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
             if (capabilities != null) {
-                return true
+                internet_available = true
+                return
             }
         }
-        return false
+        internet_available = false
     }
 
-    private fun imageViewToBitmap(imageView: ImageView): Bitmap {
-        val drawable = imageView.drawable
-        if (drawable is BitmapDrawable) {
-            return drawable.bitmap
-        }
-
-        // Create a new bitmap and canvas, and draw the drawable onto the canvas
-        val bitmap = Bitmap.createBitmap(imageView.width, imageView.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-        return bitmap
+    private fun convertBitmapToByteArray(bitmap: Bitmap): ByteArray {
+        val outputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+        return outputStream.toByteArray()
     }
 
     suspend fun loadItems() {
         isLoading.emit(true) // Start loading
+        isNetworkAvailable()
         try {
-            if (isNetworkAvailable()) {
-                //remove all the item in the local cache
-                Inventory_Items.item_list = mutableListOf<Inventory_Item>()
-
+            //remove all the item in the local cache
+            var item_list = mutableListOf<Inventory_Item>()
+            if (internet_available) {
                 val documents = db.collection("inventory")
                     .whereEqualTo("userId", currentUserId)
                     .get()
@@ -162,10 +167,17 @@ class AddPostingViewModel() : ViewModel() {
                     val price = docData.getValue("price").toString().toDouble()
                     val quantity = docData.getValue("quantity").toString().toInt()
                     val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                    item_list.add(
+                        Inventory_Item(
+                            name = name,
+                            price = price,
+                            quantity = quantity,
+                            imageBitmap = imageBitmap
+                        )
+                    )
                 }
             }
-            _items.emit(Inventory_Items.item_list.toList())
+            _items.emit(item_list.toList())
 
         } catch (exception: Exception) {
             isLoading.emit(false)
@@ -193,9 +205,40 @@ fun checkMissingField(itemName:String, itemQuantity:String, itemPrice:String): S
     return msg
 }
 
+fun addMarketplaceItemToFirestore(name:String, price:Double, quantity:Int, imageBitmap: Bitmap) {
+    // add captured image to Firestore Storage
+    val storage = Firebase.storage
+    val storageRef = storage.reference
+    val imagesRef = storageRef.child("images/crops")
+    val fileName = "image_${System.currentTimeMillis()}.png"
+    val imageRef = imagesRef.child(fileName)
+    val baos = ByteArrayOutputStream()
+    imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
+    val imageData = baos.toByteArray()
+
+    val uploadTask = imageRef.putBytes(imageData)
+    uploadTask.addOnCompleteListener { task ->
+        if (task.isSuccessful) {
+            // Image uploaded successfully
+            // Create a new doc in the inventory collection
+            val db = Firebase.firestore
+            val inventoryColRef = db.collection("marketplace");
+            val data = hashMapOf(
+                "name" to name,
+                "quantityRemaining" to quantity,
+                "quantitySold" to 0,
+                "price" to price,
+                "userId" to FirebaseAuth.getInstance().currentUser?.uid.toString(),
+                "imageUrl" to imageRef.path.toString()
+            )
+            inventoryColRef.add(data);
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddPostingsMarketItemCard(item: Inventory_Item, modifier: Modifier = Modifier) {
+fun AddPostingsMarketItemCard(viewModel: AddPostingViewModel, item: Inventory_Item, modifier: Modifier = Modifier) {
 
     // State to control whether the popup is shown or not
     var showDialog by remember { mutableStateOf(false) }
@@ -288,6 +331,7 @@ fun AddPostingsMarketItemCard(item: Inventory_Item, modifier: Modifier = Modifie
 
                         //check if there is any field missing
                         if(message.value == "Fields missing valid entries: ") {
+                            viewModel.addMarketplaceItem(postingName, postingPrice.toDouble(), postingQuantity.toInt(), item.imageBitmap)
                             showDialog = false
                         } else {
                             fieldMissingDialog = true
@@ -354,6 +398,7 @@ fun AddPostingsMarketItemCard(item: Inventory_Item, modifier: Modifier = Modifie
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPostingsMarketScreen(navController: NavController) {
+    cur_context_2 = LocalContext.current
     val viewModel = viewModel<AddPostingViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
@@ -405,6 +450,7 @@ fun AddPostingsMarketScreen(navController: NavController) {
         ) {
             items(theFoodItems.size) { item ->
                 AddPostingsMarketItemCard(
+                    viewModel = viewModel,
                     item = theFoodItems.get(item),
                     modifier = Modifier.padding(8.dp)
                 )
