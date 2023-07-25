@@ -19,11 +19,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -572,25 +575,36 @@ private fun ExtendedFABComponent(viewModel: MainViewModel) {
 
     val context = LocalContext.current
 
-    FloatingActionButton(
-        onClick = { capturedImage.value = null
-            itemName.value = ""
-            itemQuantity.value = ""
-            itemPrice.value = ""
-            showDialog.value = true},
-        content = {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-                .padding(horizontal = 10.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Item",
-                    modifier = Modifier.padding(end = 4.dp)
-                )
-                Text("Add Item")
-            }
-        }
-    )
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth()
+            .padding(bottom = 16.dp) // Add any desired padding
+    ) {
+        FloatingActionButton(
+            onClick = {
+                capturedImage.value = null
+                itemName.value = ""
+                itemQuantity.value = ""
+                itemPrice.value = ""
+                showDialog.value = true
+            },
+            content = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Item",
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                    Text("Add Item")
+                }
+            },
+            modifier = Modifier.align(Alignment.BottomCenter) // Align the FloatingActionButton within the Box
+        )
+    }
 }
 
 fun checkMissingField(itemName:String, itemQuantity:String, itemPrice:String, capturedImage:Bitmap?): String{
@@ -665,7 +679,6 @@ fun InventoryScreen(){
                 }
             }
         }
-
     }
     ExtendedFABComponent(viewModel)
 }
