@@ -1,7 +1,13 @@
 package com.example.farmconnect.ui.farmer
 
+import android.app.Application
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.net.ConnectivityManager
+import android.widget.ImageView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -22,9 +30,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,8 +43,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -41,6 +54,8 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.R
+import com.example.farmconnect.data.Inventory_Item
+import com.example.farmconnect.data.Inventory_Items
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.example.farmconnect.ui.theme.darkGreen
 import com.example.farmconnect.view.Screens
@@ -57,8 +72,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+class AddPostingViewModel() : ViewModel() {
 
-class AddPostingsMarketPlaceViewModel: ViewModel() {
     private val db = Firebase.firestore
     private val storage = Firebase.storage
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
@@ -69,8 +84,8 @@ class AddPostingsMarketPlaceViewModel: ViewModel() {
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
-    private val _items = MutableStateFlow<List<MarketPlaceItem>>(listOf())
-    val items: StateFlow<List<MarketPlaceItem>> = searchText
+    private val _items = MutableStateFlow<List<Inventory_Item>>(listOf())
+    val items: StateFlow<List<Inventory_Item>> = searchText
         .combine(_items) { text, items ->
             if (text.isBlank()) {
                 items
@@ -86,9 +101,7 @@ class AddPostingsMarketPlaceViewModel: ViewModel() {
             initialValue = _items.value
         )
 
-
     val isLoading = MutableStateFlow(true)
-
 
     init {
         viewModelScope.launch {
@@ -96,38 +109,63 @@ class AddPostingsMarketPlaceViewModel: ViewModel() {
         }
     }
 
-    private suspend fun loadItems() {
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager =
+            cur_context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (connectivityManager != null) {
+            val capabilities =
+                connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+            if (capabilities != null) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun imageViewToBitmap(imageView: ImageView): Bitmap {
+        val drawable = imageView.drawable
+        if (drawable is BitmapDrawable) {
+            return drawable.bitmap
+        }
+
+        // Create a new bitmap and canvas, and draw the drawable onto the canvas
+        val bitmap = Bitmap.createBitmap(imageView.width, imageView.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
+    suspend fun loadItems() {
         isLoading.emit(true) // Start loading
         try {
-            val documents = db.collection("marketplace")
-                .whereEqualTo("userId", currentUserId)
-                .get()
-                .await()
+            if (isNetworkAvailable()) {
+                //remove all the item in the local cache
+                Inventory_Items.item_list = mutableListOf<Inventory_Item>()
 
-            val marketItems = ArrayList<MarketPlaceItem>()
+                val documents = db.collection("inventory")
+                    .whereEqualTo("userId", currentUserId)
+                    .get()
+                    .await()
 
-            for (document in documents) {
-                val docData = document.data
-                val storageRef = storage.reference
-                val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+                //load all the items from database to local cache
+                for (document in documents) {
+                    val docData = document.data
+                    val imageUrl = docData.getValue("imageUrl").toString()
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
+                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
 
-                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
-                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-
-                marketItems.add(
-                    MarketPlaceItem(
-                        documentId = document.id,
-                        name = docData.getValue("name").toString(),
-                        price = docData.getValue("price").toString().toDouble(),
-                        quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
-                        quantitySold = docData.getValue("quantitySold").toString().toInt(),
-                        imageBitmap = imageBitmap
-                    )
-                )
+                    //add the item to local cache
+                    val name = docData.getValue("name").toString()
+                    val price = docData.getValue("price").toString().toDouble()
+                    val quantity = docData.getValue("quantity").toString().toInt()
+                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                }
             }
-
-            _items.emit(marketItems.toList())
+            _items.emit(Inventory_Items.item_list.toList())
 
         } catch (exception: Exception) {
             isLoading.emit(false)
@@ -136,37 +174,68 @@ class AddPostingsMarketPlaceViewModel: ViewModel() {
         }
     }
 
-    fun onSearchTextChange(text: String){
+    fun onSearchTextChange(text: String) {
         _searchText.value = text
     }
 }
 
-data class AddPostingsMarketPlaceItem(
-    val documentId: String,
-    val name: String,
-    val price: Double,
-    val quantityRemaining: Int,
-    val quantitySold: Int,
-    val imageBitmap: Bitmap
-) {
-    fun doesMatchSearchQuery(query: String): Boolean {
-        val matchingCombinations = listOf(
-            "$name",
-        )
-        return matchingCombinations.any {
-            it.contains(query, ignoreCase = true)
-        }
+fun checkMissingField(itemName:String, itemQuantity:String, itemPrice:String): String{
+    var msg = "Fields missing valid entries: "
+    if(itemName == "" ){
+        msg += " name, "
     }
+    if(itemQuantity == "") {
+        msg += " quantity, "
+    }
+    if(itemPrice == "") {
+        msg += " price"
+    }
+    return msg
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddPostingsMarketItemCard(item: MarketPlaceItem, modifier: Modifier = Modifier){
+fun AddPostingsMarketItemCard(item: Inventory_Item, modifier: Modifier = Modifier) {
+
+    // State to control whether the popup is shown or not
+    var showDialog by remember { mutableStateOf(false) }
+    var fieldMissingDialog by remember { mutableStateOf(false) }
+    // State to hold the user input for the posting name
+    var postingName by remember { mutableStateOf("") }
+    var postingPrice by remember { mutableStateOf("") }
+    var postingQuantity by remember { mutableStateOf("") }
+    var message = remember { mutableStateOf("") }
+
+    if (fieldMissingDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Failed To Add Posting!",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Red)},
+            text = {
+                Text(message.value,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray)
+            },
+            confirmButton = {
+                Button(onClick = {
+                    fieldMissingDialog = false
+                    message.value = ""
+                }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     Card(
         modifier = modifier
             .width(350.dp)
             .height(270.dp)
     ) {
-        Column{
+        Column {
             Image(
                 painter = rememberAsyncImagePainter(model = item.imageBitmap),
                 contentDescription = "image",
@@ -186,38 +255,106 @@ fun AddPostingsMarketItemCard(item: MarketPlaceItem, modifier: Modifier = Modifi
                 style = MaterialTheme.typography.titleSmall,
             )
             Text(
-                text = "${item.quantityRemaining} lb",
+                text = "${item.quantity} lb",
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 0.dp, bottom = 10.dp),
                 style = MaterialTheme.typography.bodySmall,
             )
-            if(item.quantitySold != 0){
-                Image(
-                    painter = painterResource(R.drawable.plus_sign),
-                    contentDescription = "image",
-                    modifier = Modifier
-                        .width(40.dp)
-                        .height(40.dp)
-                        .padding(5.dp, 0.dp),
-                    contentScale = ContentScale.Fit
-                )
-                Text(
-                    text = "Sold ${item.quantitySold} lb",
-                    modifier = Modifier.padding(start = 0.dp, end = 0.dp, top = 0.dp, bottom = 0.dp),
-                    style = TextStyle(
-                        fontSize = 15.sp,
-                        color = Color.Blue,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
+
+            Button(
+                onClick = { showDialog = true },
+                colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                Text(text = "Add posting")
             }
+
         }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Add Posting to Marketplace",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.DarkGray)},
+            confirmButton = {
+                Button(
+                    onClick = {
+                        message.value = checkMissingField(postingName, postingQuantity, postingPrice)
+
+                        //check if there is any field missing
+                        if(message.value == "Fields missing valid entries: ") {
+                            showDialog = false
+                        } else {
+                            fieldMissingDialog = true
+                        }
+                    }
+                ) {
+                    Text(text = "Save")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showDialog = false }
+                ) {
+                    Text(text = "Cancel")
+                }
+            },
+            text = {
+                Column(modifier = Modifier.padding(horizontal = 10.dp)) {
+                    Image(
+                        painter = rememberAsyncImagePainter(model = item.imageBitmap),
+                        contentDescription = "image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextField(
+                        value = postingName,
+                        onValueChange = { postingName = it },
+                        label = { Text("Enter Name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextField(
+                        value = postingQuantity,  // This should be a mutable state of String
+                        onValueChange = {
+                            if (it.toFloatOrNull() != null || it.isEmpty()) {
+                                postingQuantity = it
+                            }
+                        },
+                        label = { Text("Enter quantity") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextField(
+                        value = postingPrice,  // This should be a mutable state of String
+                        onValueChange = {
+                            if (it.toFloatOrNull() != null || it.isEmpty()) {
+                                postingPrice = it
+                            }
+                        },
+                        label = { Text("Enter price") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddPostingsMarketScreen(navController: NavController){
-    val viewModel = viewModel<MarketPlaceViewModel>()
+fun AddPostingsMarketScreen(navController: NavController) {
+    val viewModel = viewModel<AddPostingViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
 
@@ -225,13 +362,13 @@ fun AddPostingsMarketScreen(navController: NavController){
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-    ){
-        Row{
+    ) {
+        Row {
             TextField(
                 value = searchText,
                 onValueChange = viewModel::onSearchTextChange,
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = {Text(text = "Search")},
+                placeholder = { Text(text = "Search") },
             )
         }
 
@@ -267,7 +404,7 @@ fun AddPostingsMarketScreen(navController: NavController){
             columns = GridCells.Adaptive(minSize = 128.dp)
         ) {
             items(theFoodItems.size) { item ->
-                MarketItemCard(
+                AddPostingsMarketItemCard(
                     item = theFoodItems.get(item),
                     modifier = Modifier.padding(8.dp)
                 )
@@ -279,7 +416,7 @@ fun AddPostingsMarketScreen(navController: NavController){
 }
 
 @Composable
-fun AddPostingsMarketplaceScreen(){
+fun AddPostingsMarketplaceScreen() {
     val navController = rememberNavController()
     FarmConnectTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
