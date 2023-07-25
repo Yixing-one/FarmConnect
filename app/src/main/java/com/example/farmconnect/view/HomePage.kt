@@ -102,6 +102,8 @@ import com.example.farmconnect.ui.farmer.EditMarketScreen
 import com.example.farmconnect.ui.farmer.EditMarketplaceScreen
 import com.example.farmconnect.ui.farmer.MarketScreen
 //import com.example.farmconnect.ui.farmer.PostScreen
+import com.example.farmconnect.ui.farmer.PostScreen
+import com.example.farmconnect.ui.farmer.PostViewModel
 
 class HomePage : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -148,6 +150,7 @@ fun App() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val cartViewModel = viewModel<CartViewModel>();
+//    val postViewModel = viewModel<PostViewModel>();
 
     //ask the permission for camera app
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
@@ -202,9 +205,9 @@ fun App() {
                         composable(route = Screens.Finance.name){
                             FinanceStatsScreen()
                         }
-//                        composable(route = Screens.Donate.name){
-//                            PostScreen()
-//                        }
+                        composable(route = Screens.Donate.name){
+                            PostScreen()
+                        }
                         composable(route = Screens.Marketplace.name){
                             MarketScreen(navController)
                         }

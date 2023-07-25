@@ -19,11 +19,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -185,13 +188,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
 
                     //add the item to local cache
+                    val docId = document.id
                     val name = docData?.getValue("name").toString()
                     val price = docData?.getValue("price").toString().toDouble()
                     val quantity = docData?.getValue("quantity").toString().toInt()
                     val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap, docId)
                 }
-                _items.value = Inventory_Items.item_list.toList()
+                _items.emit(Inventory_Items.item_list)
 
             } else if (internet_available && (Inventory_Items.update_item_list.size != 0)){
                 for(item in Inventory_Items.update_item_list){
@@ -220,11 +224,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
 
                     //add the item to local cache
+                    val docId = document.id
                     val name = docData?.getValue("name").toString()
                     val price = docData?.getValue("price").toString().toDouble()
                     val quantity = docData?.getValue("quantity").toString().toInt()
                     val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap, docId)
                 }
                 _items.value = Inventory_Items.item_list.toList()
 
@@ -251,11 +256,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
 
                     //add the item to local cache
+                    val docId = document.id
                     val name = docData?.getValue("name").toString()
                     val price = docData?.getValue("price").toString().toDouble()
                     val quantity = docData?.getValue("quantity").toString().toInt()
                     val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap, docId)
                 }
                 _items.value = Inventory_Items.item_list.toList()
             }
@@ -551,6 +557,7 @@ private fun ExtendedFABComponent(viewModel: MainViewModel) {
                             Inventory_Items.addItem(itemName.value, itemPrice.value.toDouble(), itemQuantity.value.toInt(), capturedImage.value as Bitmap)
                             Inventory_Items.update_item_list.add(Inventory_Item(itemName.value, itemPrice.value.toDouble(), itemQuantity.value.toInt(), capturedImage.value as Bitmap))
                             CoroutineScope(Dispatchers.Main).launch {
+                                delay(3000)
                                 Log.d("TAG,", "update new item");
                                 viewModel.loadItems()
                             }
@@ -569,25 +576,36 @@ private fun ExtendedFABComponent(viewModel: MainViewModel) {
 
     val context = LocalContext.current
 
-    FloatingActionButton(
-        onClick = { capturedImage.value = null
-            itemName.value = ""
-            itemQuantity.value = ""
-            itemPrice.value = ""
-            showDialog.value = true},
-        content = {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-                .padding(horizontal = 10.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Item",
-                    modifier = Modifier.padding(end = 4.dp)
-                )
-                Text("Add Item")
-            }
-        }
-    )
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth()
+            .padding(bottom = 16.dp) // Add any desired padding
+    ) {
+        FloatingActionButton(
+            onClick = {
+                capturedImage.value = null
+                itemName.value = ""
+                itemQuantity.value = ""
+                itemPrice.value = ""
+                showDialog.value = true
+            },
+            content = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Item",
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                    Text("Add Item")
+                }
+            },
+            modifier = Modifier.align(Alignment.BottomCenter) // Align the FloatingActionButton within the Box
+        )
+    }
 }
 
 fun checkMissingField(itemName:String, itemQuantity:String, itemPrice:String, capturedImage:Bitmap?): String{
@@ -662,7 +680,6 @@ fun InventoryScreen(){
                 }
             }
         }
-
     }
     ExtendedFABComponent(viewModel)
 }

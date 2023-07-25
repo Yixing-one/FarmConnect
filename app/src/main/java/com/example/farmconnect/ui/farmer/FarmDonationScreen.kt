@@ -59,16 +59,16 @@ fun DonationPostCard(post: Post, modifier: Modifier = Modifier){
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
-            val image: Painter = painterResource(id = post.imageId)
-            Image(
-                modifier = Modifier
-                    .size(80.dp, 80.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-                painter = image,
-                alignment = Alignment.CenterStart,
-                contentDescription = "",
-                contentScale = ContentScale.Crop
-            )
+//            val image: Painter = painterResource(id = post.imageId)
+//            Image(
+//                modifier = Modifier
+//                    .size(80.dp, 80.dp)
+//                    .clip(RoundedCornerShape(16.dp)),
+//                painter = image,
+//                alignment = Alignment.CenterStart,
+//                contentDescription = "",
+//                contentScale = ContentScale.Crop
+//            )
 
             Spacer(modifier = Modifier.width(10.dp))
 

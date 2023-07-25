@@ -128,4 +128,3 @@ val postedItems = listOf(
         imageId = R.drawable.romaine_lettuce
     ),
 )
-

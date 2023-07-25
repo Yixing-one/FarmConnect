@@ -163,6 +163,7 @@ class AddPostingViewModel() : ViewModel() {
                     val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
 
                     //add the item to local cache
+                    val docId = document.id
                     val name = docData.getValue("name").toString()
                     val price = docData.getValue("price").toString().toDouble()
                     val quantity = docData.getValue("quantity").toString().toInt()
