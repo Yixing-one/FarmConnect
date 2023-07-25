@@ -188,13 +188,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
 
                     //add the item to local cache
+                    val docId = document.id
                     val name = docData?.getValue("name").toString()
                     val price = docData?.getValue("price").toString().toDouble()
                     val quantity = docData?.getValue("quantity").toString().toInt()
                     val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap, docId)
                 }
-                _items.value = Inventory_Items.item_list.toList()
+                _items.emit(Inventory_Items.item_list)
 
             } else if (internet_avaible && (Inventory_Items.update_item_list.size != 0)){
                 for(item in Inventory_Items.update_item_list){
@@ -223,11 +224,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
 
                     //add the item to local cache
+                    val docId = document.id
                     val name = docData?.getValue("name").toString()
                     val price = docData?.getValue("price").toString().toDouble()
                     val quantity = docData?.getValue("quantity").toString().toInt()
                     val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap, docId)
                 }
                 _items.value = Inventory_Items.item_list.toList()
 
@@ -254,11 +256,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
 
                     //add the item to local cache
+                    val docId = document.id
                     val name = docData?.getValue("name").toString()
                     val price = docData?.getValue("price").toString().toDouble()
                     val quantity = docData?.getValue("quantity").toString().toInt()
                     val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap)
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap, docId)
                 }
                 _items.value = Inventory_Items.item_list.toList()
             }
@@ -554,6 +557,7 @@ private fun ExtendedFABComponent(viewModel: MainViewModel) {
                             Inventory_Items.addItem(itemName.value, itemPrice.value.toDouble(), itemQuantity.value.toInt(), capturedImage.value as Bitmap)
                             Inventory_Items.update_item_list.add(Inventory_Item(itemName.value, itemPrice.value.toDouble(), itemQuantity.value.toInt(), capturedImage.value as Bitmap))
                             CoroutineScope(Dispatchers.Main).launch {
+                                delay(3000)
                                 Log.d("TAG,", "update new item");
                                 viewModel.loadItems()
                             }
