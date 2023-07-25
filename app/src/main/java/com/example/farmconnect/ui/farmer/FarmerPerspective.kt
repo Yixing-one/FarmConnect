@@ -1,6 +1,7 @@
 package com.example.farmconnect.ui.farmer
 
 import android.Manifest
+import android.os.Build
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Image
@@ -16,6 +17,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.annotation.DrawableRes
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -220,6 +222,7 @@ fun DonationItemCard(item: Item, modifier: Modifier = Modifier){
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.P)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostScreen() {
@@ -288,6 +291,7 @@ fun PostScreen() {
                     Card(
                         onClick = {
                             val selectedItem = item
+                            /*
                             if (selectedItems.any { it.first == selectedItem }) {
                                 selectedItems.removeAll { it.first == selectedItem }
                             } else {
@@ -295,21 +299,21 @@ fun PostScreen() {
                                 if (selectedQuantity > 0) {
                                     selectedItems.add(selectedItem to selectedQuantity)
                                 }
-                            }
+                            }*/
                         },
                         modifier = Modifier
                             .width(275.dp)
                             .height(70.dp)
                     ) {
                         Row(){
-                            Image(
-                                painter = painterResource(id = item.imageId),
+                           /* Image(
+                                //painter = painterResource(id = item.imageId),
                                 contentDescription = "image",
                                 modifier = Modifier
                                     .width(100.dp)
                                     .height(100.dp),
                                 contentScale = ContentScale.Crop
-                            )
+                            )*/
                             Column(){
                                 Text(
                                     text = "${item.name}",
