@@ -3,6 +3,8 @@ package com.example.farmconnect.ui.farmer
 
 
 import android.Manifest
+import android.content.ContentValues
+import android.content.ContentValues.TAG
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -109,40 +111,45 @@ class PostViewModel : ViewModel() {
 
     val isLoading = MutableStateFlow(true)
     init {
+        Log.d(TAG, "init farmer perspective")
+
         viewModelScope.launch {
+            Log.d(TAG, "farmer perspective launch")
+
             loadItems()
         }
     }
-    private fun imageViewToBitmap(imageView: ImageView): Bitmap {
-        val drawable = imageView.drawable
-        if (drawable is BitmapDrawable) {
-            return drawable.bitmap
-        }
 
-        // Create a new bitmap and canvas, and draw the drawable onto the canvas
-        val bitmap = Bitmap.createBitmap(imageView.width, imageView.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-        return bitmap
-    }
     suspend fun loadItems() {
         isLoading.emit(true) // Start loading
         try {
                 //remove all the item in the local cache
 //                Inventory_Items.item_list = mutableListOf<Inventory_Item>()
+            Log.d(TAG, "farmer perspective load items")
 
-                val documents = db.collection("inventory")
-                    .whereEqualTo("userId", currentUserId)
+            Log.d(TAG, "farmer perspective userID: " + currentUserId)
+
+            val documents = db.collection("inventory")
+//                    .whereEqualTo("userId", currentUserId)
                     .get()
                     .await()
 
-            val marketItems = ArrayList<Inventory_Item>()
+            Log.d(TAG, "farmer persp documents: " + documents.toString())
 
-                //load all the items from database to local cache
+            val inventoryItems = ArrayList<Inventory_Item>()
+
+            Log.d(TAG, "farmer persp inventoryItems: " + documents.toString())
+
+
+            //load all the items from database to local cache
                 for (document in documents) {
+                    Log.d(TAG, "farmer persp entered loop document: ")
+
                     val docData = document.data
-                    val imageUrl = docData.getValue("imageUrl").toString()
+
+                    Log.d(TAG, "farmer persp docData: " + docData.toString())
+
+//                    val imageUrl = docData.getValue("imageUrl").toString()
                     val storageRef = storage.reference
                     val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
                     val TEN_MEGABYTE: Long = 1024 * 1024 * 10
@@ -155,9 +162,8 @@ class PostViewModel : ViewModel() {
                     val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                     Inventory_Items.addItem(document.id, name, price, quantity, imageBitmap)
                 }
-//            _items.emit(Inventory_Items.item_list.toList())
 
-            _items.emit(marketItems.toList())
+            _items.emit(inventoryItems.toList())
 
         } catch (exception: Exception) {
             isLoading.emit(false)
@@ -178,41 +184,6 @@ class PostViewModel : ViewModel() {
     }
 }
 
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun DonationItemCard(item: Item, modifier: Modifier = Modifier){
-    Card(
-        modifier = modifier
-            .width(150.dp)
-            .height(230.dp)
-    ) {
-        Column{
-            Image(
-                painter = painterResource(id = item.imageId),
-                contentDescription = "image",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                contentScale = ContentScale.Crop
-            )
-            Text(
-                text = "$${item.price}",
-                modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 10.dp, bottom = 7.dp),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = "${item.name}",
-                modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Text(
-                text = "${item.quantity} lb",
-                modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 0.dp, bottom = 10.dp),
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -235,6 +206,8 @@ fun PostScreen() {
 
     val charityNameState = remember { mutableStateOf("") }
     val charityLocationState = remember { mutableStateOf("") }
+
+    Log.d(TAG, "entered PostScreen")
 
     Column(
         modifier = Modifier
@@ -463,4 +436,46 @@ fun PostScreen() {
 @Composable
 fun PreviewPostScreen() {
     PostScreen()
+}
+
+
+
+
+
+
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun DonationItemCard(item: Item, modifier: Modifier = Modifier){
+    Card(
+        modifier = modifier
+            .width(150.dp)
+            .height(230.dp)
+    ) {
+        Column{
+            Image(
+                painter = painterResource(id = item.imageId),
+                contentDescription = "image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentScale = ContentScale.Crop
+            )
+            Text(
+                text = "$${item.price}",
+                modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 10.dp, bottom = 7.dp),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = "${item.name}",
+                modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = "${item.quantity} lb",
+                modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 0.dp, bottom = 10.dp),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
 }

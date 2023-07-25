@@ -1,7 +1,9 @@
 package com.example.farmconnect.ui.charity
 
+import android.content.ContentValues.TAG
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -68,14 +70,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 data class Post(
-//    val postId: Int,
     val charity_name: String,
     val charity_location: String,
     val charity_distance: Double,
     val item_name: String,
     val item_amount: Double,
-//    @DrawableRes
-//    val imageId: Int,
     val imageBitmap: Bitmap,
     var isClaimed: Boolean = false
 ){
@@ -118,26 +117,11 @@ class FarmViewModel: ViewModel() {
             started = SharingStarted.WhileSubscribed(),
             initialValue = _posts.value
         )
-
-//    val posts = searchText
-//        .combine(_posts){ text, posts ->
-//            if(text.isBlank()){
-//                posts
-//            }
-//            else{
-//                posts.filter{
-//                    it.doesMatchSearchQuery(text)
-//                }
-//            }
-//        }
-//        .stateIn(
-//            viewModelScope,
-//            SharingStarted.WhileSubscribed(5000),
-//            _posts.value
-//        )
     val isLoading = MutableStateFlow(true)
     init {
+        Log.d(TAG, "init")
         viewModelScope.launch {
+            Log.d(TAG, "launch")
             loadItems()
         }
     }
@@ -147,18 +131,27 @@ class FarmViewModel: ViewModel() {
         try {
             //remove all the item in the local cache
 //            Post.item_list = mutableListOf<Inventory_Item>()
+            Log.d(TAG, "load items func")
 
             val documents = db.collection("charityPosts")
-                .whereEqualTo("userId", currentUserId)
+//                .whereEqualTo("userId", currentUserId)
                 .get()
                 .await()
 
-            val marketItems = ArrayList<Post>()
+            Log.d(TAG, "documents: " + documents.toString())
+
+
+            val charityItems = ArrayList<Post>()
+            Log.d(TAG, "charityItems: " + charityItems)
 
 
             //load all the items from database to local cache
             for (document in documents) {
+                Log.d(TAG, "entered loop document: ")
+
                 val docData = document.data
+                Log.d(TAG, "docData: " + docData.toString())
+
                 val storageRef = storage.reference
                 val imageRef = storageRef.child(docData.getValue("imageId").toString())
 
@@ -166,7 +159,7 @@ class FarmViewModel: ViewModel() {
                 val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
                 val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
-                marketItems.add(
+                charityItems.add(
                     Post(
 //                        documentId = document.id,
                         charity_name = docData.getValue("charity_name").toString(),
@@ -178,7 +171,9 @@ class FarmViewModel: ViewModel() {
                     )
                 )
             }
-            _posts.emit(marketItems.toList())
+            Log.d(TAG, "exit loop")
+
+            _posts.emit(charityItems.toList())
 //            _posts.emit(Inventory_Items.item_list.toList())
 
         } catch (exception: Exception) {
@@ -199,6 +194,7 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
     Card(
         modifier = Modifier
             .width(410.dp)
+            .height(150.dp)
             .padding(8.dp)
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = {})
@@ -212,7 +208,8 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                 painter = rememberAsyncImagePainter(model = post.imageBitmap),
                 contentDescription = "image",
                 modifier = Modifier
-                    .fillMaxWidth()
+//                    .fillMaxWidth()
+                    .width(120.dp)
                     .height(120.dp),
                 contentScale = ContentScale.Crop
             )
@@ -292,6 +289,7 @@ fun CharityModeScreen(){
     val viewModel = viewModel<FarmViewModel>()
     val charityPosts by viewModel.posts.collectAsState()
     val searchText by viewModel.searchText.collectAsState()
+    Log.d(TAG, "charityMODeScreen")
 
     Column(
         modifier = Modifier
@@ -312,6 +310,8 @@ fun CharityModeScreen(){
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             )
+            Log.d(TAG, "charity mode label")
+
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -326,8 +326,6 @@ fun CharityModeScreen(){
         }
 
         Spacer(modifier = Modifier.height(10.dp))
-
-        Text("YOOO")
 
         LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)){
             items(charityPosts.size){item ->
