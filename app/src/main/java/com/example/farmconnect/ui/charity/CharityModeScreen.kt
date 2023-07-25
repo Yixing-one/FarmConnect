@@ -71,6 +71,7 @@ import kotlinx.coroutines.tasks.await
 
 
 data class Post(
+//    val userId: String,
     val charity_name: String,
     val charity_location: String,
     val charity_distance: Double,
