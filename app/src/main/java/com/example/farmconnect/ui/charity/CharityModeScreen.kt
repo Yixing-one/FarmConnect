@@ -69,6 +69,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+
 data class Post(
     val charity_name: String,
     val charity_location: String,
