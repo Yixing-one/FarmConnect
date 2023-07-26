@@ -103,7 +103,7 @@ import kotlinx.coroutines.*
 lateinit var cur_context: Context
 lateinit var viewModel: MainViewModel
 var internet_available = false
-
+// reference for speech to text: https://github.com/akash251/Speech_To_Text_In_Compose
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var db = Firebase.firestore
