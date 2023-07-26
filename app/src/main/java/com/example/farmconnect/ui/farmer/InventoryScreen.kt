@@ -4,6 +4,7 @@ import android.Manifest
 import android.R
 import android.app.Activity
 import android.app.Application
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -71,10 +72,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
-import com.bumptech.glide.Glide
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
-import com.example.farmconnect.SpeechRecognizerContract
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -159,7 +157,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         internet_available = false
         isNetworkAvailable()
 
-        if(isLoading.value == true) {
+        if (isLoading.value == true) {
             return
         }
         isLoading.emit(true)
@@ -168,8 +166,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             db = Firebase.firestore
             storage = Firebase.storage
 
-            if(internet_available && (Inventory_Items.item_list.size == 0) && (Inventory_Items.update_item_list.size == 0)) {
-                //remove all the item in the local cache
+            if (internet_available && (Inventory_Items.item_list.size == 0) && (Inventory_Items.update_item_list.size == 0)) {
+                // remove all the items in the local cache
                 Inventory_Items.item_list = mutableListOf<Inventory_Item>()
 
                 val documents = db.collection("inventory")
@@ -177,67 +175,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     .get()
                     .await()
 
-                //load all the items from database to local cache
-                for (i in 0 until documents.size() step 1) {
-                    var document = documents.documents[i]
-                    val docData = document.data
-                    val imageUrl = docData?.getValue("imageUrl").toString()
-                    val storageRef = storage.reference
-                    val imageRef = storageRef.child(docData?.getValue("imageUrl").toString())
-                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
-                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-
-                    //add the item to local cache
-                    val docId = document.id
-                    val name = docData?.getValue("name").toString()
-                    val price = docData?.getValue("price").toString().toDouble()
-                    val quantity = docData?.getValue("quantity").toString().toInt()
-                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap, docId)
-                }
+                val jobs = launchImageDownloadJobs(documents)
+                jobs.joinAll() // Wait for all image downloads to complete
                 _items.emit(Inventory_Items.item_list)
-
-            } else if (internet_available && (Inventory_Items.update_item_list.size != 0)){
-                for(item in Inventory_Items.update_item_list){
+            } else if (internet_available && (Inventory_Items.update_item_list.size != 0)) {
+                for (item in Inventory_Items.update_item_list) {
                     addItemToFirestore(item.name, item.price, item.quantity, item.imageBitmap)
                 }
 
-                //remove all the item in the local cache
+                // remove all the items in the local cache
                 Inventory_Items.update_item_list = mutableListOf<Inventory_Item>()
                 Inventory_Items.item_list = mutableListOf<Inventory_Item>()
 
-                db = Firebase.firestore
-                storage = Firebase.storage
                 val documents = db.collection("inventory")
                     .whereEqualTo("userId", currentUserId)
                     .get()
                     .await()
 
-                //load all the items from database to local cache
-                for (i in 0 until documents.size() step 1) {
-                    var document = documents.documents[i]
-                    val docData = document.data
-                    val imageUrl = docData?.getValue("imageUrl").toString()
-                    val storageRef = storage.reference
-                    val imageRef = storageRef.child(docData?.getValue("imageUrl").toString())
-                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
-                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-
-                    //add the item to local cache
-                    val docId = document.id
-                    val name = docData?.getValue("name").toString()
-                    val price = docData?.getValue("price").toString().toDouble()
-                    val quantity = docData?.getValue("quantity").toString().toInt()
-                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap, docId)
-                }
+                val jobs = launchImageDownloadJobs(documents)
+                jobs.joinAll() // Wait for all image downloads to complete
+                _items.emit(Inventory_Items.item_list)
+            } else if (!internet_available) {
                 _items.value = Inventory_Items.item_list.toList()
-
-            } else if (!internet_available){
-                _items.value = Inventory_Items.item_list.toList()
-
             } else {
-                //remove all the item in the local cache
+                // remove all the items in the local cache
                 Inventory_Items.item_list = mutableListOf<Inventory_Item>()
 
                 val documents = db.collection("inventory")
@@ -245,25 +206,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     .get()
                     .await()
 
-                //load all the items from database to local cache
-                for (i in 0 until documents.size() step 1) {
-                    var document = documents.documents[i]
-                    val docData = document.data
-                    val imageUrl = docData?.getValue("imageUrl").toString()
-                    val storageRef = storage.reference
-                    val imageRef = storageRef.child(docData?.getValue("imageUrl").toString())
-                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
-                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-
-                    //add the item to local cache
-                    val docId = document.id
-                    val name = docData?.getValue("name").toString()
-                    val price = docData?.getValue("price").toString().toDouble()
-                    val quantity = docData?.getValue("quantity").toString().toInt()
-                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    Inventory_Items.addItem(name, price, quantity, imageBitmap, docId)
-                }
-                _items.value = Inventory_Items.item_list.toList()
+                val jobs = launchImageDownloadJobs(documents)
+                jobs.joinAll() // Wait for all image downloads to complete
+                _items.emit(Inventory_Items.item_list)
             }
 
         } catch (exception: Exception) {
@@ -272,6 +217,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } finally {
             isLoading.emit(false)
         }
+    }
+
+    private fun launchImageDownloadJobs(documents: QuerySnapshot): MutableList<Job> {
+        val jobs = mutableListOf<Job>()
+        for (i in 0 until documents.size() step 1) {
+            jobs.add(GlobalScope.launch {
+                val document = documents.documents[i]
+                val docData = document.data
+                val storageRef = storage.reference
+                val imageRef = storageRef.child(docData?.getValue("imageUrl").toString())
+                val TEN_MEGABYTE: Long = 1024 * 1024 * 10
+                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+
+                // add the item to local cache
+                val docId = document.id
+                val name = docData?.getValue("name").toString()
+                val price = docData?.getValue("price").toString().toDouble()
+                val quantity = docData?.getValue("quantity").toString().toInt()
+                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                withContext(Dispatchers.Main) {
+                    Inventory_Items.addItem(name, price, quantity, imageBitmap, docId)
+                }
+            })
+        }
+        return jobs
     }
 
     fun onSearchTextChange(text: String) {
@@ -351,7 +321,7 @@ fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier) {
     }
 }
 
-fun addItemToFirestore(name:String, price:Double, quantity:Int, imageBitmap: Bitmap) {
+suspend fun addItemToFirestore(name:String, price:Double, quantity:Int, imageBitmap: Bitmap) {
     // add captured image to Firestore Storage
     val storage = Firebase.storage
     val storageRef = storage.reference
@@ -557,8 +527,12 @@ private fun ExtendedFABComponent(viewModel: MainViewModel) {
                             Inventory_Items.addItem(itemName.value, itemPrice.value.toDouble(), itemQuantity.value.toInt(), capturedImage.value as Bitmap)
                             Inventory_Items.update_item_list.add(Inventory_Item(itemName.value, itemPrice.value.toDouble(), itemQuantity.value.toInt(), capturedImage.value as Bitmap))
                             CoroutineScope(Dispatchers.Main).launch {
-                                delay(3000)
-                                Log.d("TAG,", "update new item");
+                                viewModel.loadItems()
+                            }
+                            CoroutineScope(Dispatchers.Main).launch {
+                                //viewModel.isLoading.emit(true)
+                                delay(5000)
+                                //viewModel.isLoading.emit(false)
                                 viewModel.loadItems()
                             }
                         }
