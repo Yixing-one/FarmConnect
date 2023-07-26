@@ -63,6 +63,8 @@ import com.example.farmconnect.ui.theme.darkGreen
 import com.example.farmconnect.view.Screens
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
@@ -115,9 +117,27 @@ class AddPostingViewModel() : ViewModel() {
         }
     }
 
-    fun addMarketplaceItem(name: String, price: Double, quantity: Int, imageBitmap: Bitmap) {
+    fun isInvalidQuantity(quantity: String, maxQuantity: Int): Boolean {
+        val numericQuantity = quantity.toIntOrNull()
+        return numericQuantity == null || numericQuantity <= 0 || numericQuantity > maxQuantity
+    }
+
+    fun isInvalidPrice(price: String): Boolean {
+        val numericPrice = price.toDoubleOrNull()
+        return numericPrice == null || numericPrice <= 0.0
+    }
+
+    fun addMarketplaceItem(
+        docId: String,
+        name: String,
+        price: Double,
+        inventoryQuantity: Int,
+        quantity: Int,
+        imageBitmap: Bitmap,
+        viewModel: AddPostingViewModel
+    ) {
         viewModelScope.launch {
-            addMarketplaceItemToFirestore(name, price, quantity, imageBitmap)
+            addMarketplaceItemToFirestore(docId, name, price, inventoryQuantity, quantity, imageBitmap, viewModel)
         }
     }
 
@@ -135,10 +155,26 @@ class AddPostingViewModel() : ViewModel() {
         internet_available = false
     }
 
-    private fun convertBitmapToByteArray(bitmap: Bitmap): ByteArray {
-        val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-        return outputStream.toByteArray()
+    fun updateInventoryQuantity(docId: String, quantityRemaining: Double) {
+        viewModelScope.launch {
+            isLoading.emit(true) // Start loading
+            try {
+                db.collection("inventory")
+                    .document(docId)
+                    .update("quantity", FieldValue.increment(-quantityRemaining))
+                    .addOnSuccessListener {
+                        // Update the item locally in the _items StateFlow
+//                        _items.value = _items.value.map { if (it.documentId == docId) it.copy(quantity = quantityRemaining.toInt()) else it }
+                    }
+                    .addOnFailureListener { exception ->
+                        // Handle failure
+                    }
+            } catch (exception: Exception) {
+                // Handle exception
+            } finally {
+                isLoading.emit(false)
+            }
+        }
     }
 
     suspend fun loadItems() {
@@ -206,7 +242,15 @@ fun checkMissingField(itemName:String, itemQuantity:String, itemPrice:String): S
     return msg
 }
 
-fun addMarketplaceItemToFirestore(name:String, price:Double, quantity:Int, imageBitmap: Bitmap) {
+fun addMarketplaceItemToFirestore(
+    docId: String,
+    name:String,
+    price:Double,
+    inventoryQuantity: Int,
+    quantity:Int,
+    imageBitmap: Bitmap,
+    viewModel: AddPostingViewModel
+) {
     // add captured image to Firestore Storage
     val storage = Firebase.storage
     val storageRef = storage.reference
@@ -223,7 +267,7 @@ fun addMarketplaceItemToFirestore(name:String, price:Double, quantity:Int, image
             // Image uploaded successfully
             // Create a new doc in the inventory collection
             val db = Firebase.firestore
-            val inventoryColRef = db.collection("marketplace");
+            val marketplaceColRef = db.collection("marketplace");
             val data = hashMapOf(
                 "name" to name,
                 "quantityRemaining" to quantity,
@@ -232,7 +276,9 @@ fun addMarketplaceItemToFirestore(name:String, price:Double, quantity:Int, image
                 "userId" to FirebaseAuth.getInstance().currentUser?.uid.toString(),
                 "imageUrl" to imageRef.path.toString()
             )
-            inventoryColRef.add(data);
+            marketplaceColRef.add(data).addOnSuccessListener {
+                viewModel.updateInventoryQuantity(docId, quantity.toDouble())
+            }
         }
     }
 }
@@ -244,6 +290,9 @@ fun AddPostingsMarketItemCard(viewModel: AddPostingViewModel, item: Inventory_It
     // State to control whether the popup is shown or not
     var showDialog by remember { mutableStateOf(false) }
     var fieldMissingDialog by remember { mutableStateOf(false) }
+    // States to hold error
+    var postingQuantityError by remember { mutableStateOf(false) }
+    var postingPriceError by remember { mutableStateOf(false) }
     // State to hold the user input for the posting name
     var postingName by remember { mutableStateOf("") }
     var postingPrice by remember { mutableStateOf("") }
@@ -268,6 +317,37 @@ fun AddPostingsMarketItemCard(viewModel: AddPostingViewModel, item: Inventory_It
                     fieldMissingDialog = false
                     message.value = ""
                 }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    if (postingQuantityError) {
+        AlertDialog(
+            onDismissRequest = { postingQuantityError = false },
+            title = {
+                Text(
+                    "Invalid Quantity",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Red
+                )
+            },
+            text = {
+                Text(
+                    "Quantity should be between 1 and ${item.quantity}",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        postingQuantityError = false
+                    }
+                ) {
                     Text("OK")
                 }
             }
@@ -328,11 +408,25 @@ fun AddPostingsMarketItemCard(viewModel: AddPostingViewModel, item: Inventory_It
             confirmButton = {
                 Button(
                     onClick = {
+                        if (postingQuantity.isNotEmpty()) {
+                            if (viewModel.isInvalidQuantity(postingQuantity, item.quantity)) {
+                                postingQuantityError = true
+                                return@Button
+                            }
+                        }
+
+                        if (postingPrice.isNotEmpty()) {
+                            if (viewModel.isInvalidPrice(postingPrice)) {
+                                postingPriceError = true
+                                return@Button
+                            }
+                        }
+
                         message.value = checkMissingField(postingName, postingQuantity, postingPrice)
 
                         //check if there is any field missing
                         if(message.value == "Fields missing valid entries: ") {
-                            viewModel.addMarketplaceItem(postingName, postingPrice.toDouble(), postingQuantity.toInt(), item.imageBitmap)
+                            viewModel.addMarketplaceItem(item.documentId!!, postingName, postingPrice.toDouble(), item.quantity, postingQuantity.toInt(), item.imageBitmap, viewModel)
                             showDialog = false
                         } else {
                             fieldMissingDialog = true
@@ -399,6 +493,7 @@ fun AddPostingsMarketItemCard(viewModel: AddPostingViewModel, item: Inventory_It
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPostingsMarketScreen(navController: NavController) {
+    Log.d("TAG,", "option 2_2");
     cur_context_2 = LocalContext.current
     val viewModel = viewModel<AddPostingViewModel>()
     val searchText by viewModel.searchText.collectAsState()
