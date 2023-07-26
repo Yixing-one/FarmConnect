@@ -78,7 +78,9 @@ data class Post(
     val item_name: String,
     val item_amount: Double,
     val imageBitmap: Bitmap,
-    var isClaimed: Boolean = false
+    var isClaimed: Boolean = false,
+    val documentId: String? = null
+
 ){
     fun doesMatchSearchQuery(query: String): Boolean {
         val matchingCombinations = listOf(
@@ -89,7 +91,6 @@ data class Post(
         }
     }
 }
-
 
 class FarmViewModel: ViewModel() {
     private val db = Firebase.firestore
@@ -128,15 +129,24 @@ class FarmViewModel: ViewModel() {
         }
     }
 
+    suspend fun updateClaimStatus(documentID: String) {
+
+        val charityDocuments = db.collection("charityPosts")
+        if(documentID != null) {
+            val docData = charityDocuments.document(documentID).get().await().data;
+            var claimedStatus = docData?.getValue("isClaimed")
+            Log.d(TAG, claimedStatus.toString())
+            claimedStatus = true
+            charityDocuments.document(documentID).update("isClaimed", claimedStatus).await();
+        }
+    }
+
     suspend fun loadItems() {
         isLoading.emit(true) // Start loading
         try {
-            //remove all the item in the local cache
-//            Post.item_list = mutableListOf<Inventory_Item>()
             Log.d(TAG, "load items func")
 
             val documents = db.collection("charityPosts")
-//                .whereEqualTo("userId", currentUserId)
                 .get()
                 .await()
 
@@ -161,15 +171,20 @@ class FarmViewModel: ViewModel() {
                 val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
                 val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
+                if(if (docData.getValue("isClaimed").toString() == "true") true else false){
+                    continue;
+                }
+
                 charityItems.add(
                     Post(
-//                        documentId = document.id,
                         charity_name = docData.getValue("charity_name").toString(),
                         charity_location = docData.getValue("charity_location").toString(),
                         charity_distance = docData.getValue("charity_distance").toString().toDouble(),
                         item_name = docData.getValue("item_name").toString(),
                         item_amount = docData.getValue("item_amount").toString().toDouble(),
-                        imageBitmap = imageBitmap
+                        imageBitmap = imageBitmap,
+                        isClaimed = if (docData.getValue("isClaimed").toString() == "true") true else false,
+                        documentId = document.id
                     )
                 )
             }
@@ -192,7 +207,7 @@ class FarmViewModel: ViewModel() {
 }
 @Composable
 //reference from code: https://github.com/Spikeysanju/Wiggles/blob/main/app/src/main/java/dev/spikeysanju/wiggles/component/ItemDogCard.kt
-fun PostCard(post: Post, modifier: Modifier = Modifier){
+fun PostCard(post: Post,  claimed: Boolean, viewModel: FarmViewModel,  modifier: Modifier = Modifier){
     Card(
         modifier = Modifier
             .width(410.dp)
@@ -220,12 +235,9 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
 
             Column(modifier = Modifier.align(Alignment.CenterVertically)) {
                 Text(
-                    text = "${post.item_name}  ${post.item_amount} kg",
+                    text = "${post.item_name}  ${post.item_amount} lb",
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 0.dp),
-                    style = TextStyle(
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    style = MaterialTheme.typography.titleMedium
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -233,10 +245,7 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                 Text(
                     text = "${post.charity_name}",
                     modifier = Modifier.padding(0.dp, 0.dp, 12.dp, 0.dp),
-                    style = TextStyle(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    style = MaterialTheme.typography.titleSmall
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -244,10 +253,7 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                 Text(
                     text = "${post.charity_location}",
                     modifier = Modifier.padding(0.dp, 0.dp, 19.dp, 0.dp),
-                    style = TextStyle(
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    style = MaterialTheme.typography.bodySmall
                 )
 
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -266,17 +272,21 @@ fun PostCard(post: Post, modifier: Modifier = Modifier){
                         modifier = Modifier.padding(8.dp, 3.dp, 5.dp, 0.dp),
                         style = TextStyle(
                             fontSize = 15.sp,
-//                            color = Color.Black,
                             fontWeight = FontWeight.Bold
                         )
                     )
                     Button(
                         onClick = {
-                            post.isClaimed = true
+
+                            viewModel.viewModelScope.launch{
+                                if (!claimed) {
+                                    post.documentId?.let { viewModel.updateClaimStatus(it) } // Call the updateClaimStatus function
+                                }
+                            }
                         },
-                        enabled = !post.isClaimed
+                        enabled = !claimed
                     ) {
-                        Text(text = if (post.isClaimed) "Claimed" else "Claim")
+                        Text(text = if (claimed) "Claimed" else "Claim")
                     }
                 }
 
@@ -329,15 +339,16 @@ fun CharityModeScreen(){
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)){
-            items(charityPosts.size){item ->
+        LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)) {
+            items(charityPosts.size) { item ->
                 PostCard(
                     post = charityPosts.get(item),
+                    claimed = charityPosts.get(item).isClaimed,
+                    viewModel = viewModel, // Pass the viewModel instance
                     modifier = Modifier.padding(8.dp)
                 )
             }
         }
-
         Spacer(modifier = Modifier.height(20.dp))
         Image(
             painter = painterResource(id = R.drawable.plus_sign),

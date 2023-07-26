@@ -67,6 +67,7 @@
     import androidx.lifecycle.ViewModel
     import androidx.lifecycle.viewModelScope
     import androidx.lifecycle.viewmodel.compose.viewModel
+    import androidx.navigation.NavController
     import coil.compose.rememberAsyncImagePainter
     import com.example.farmconnect.SpeechRecognizerContract
     import com.example.farmconnect.data.InventoryItemCharity
@@ -76,6 +77,7 @@
     import com.example.farmconnect.data.Item
     import com.example.farmconnect.ui.charity.PostCard
     import com.example.farmconnect.ui.theme.darkGreen
+    import com.example.farmconnect.view.Screens
     import com.google.accompanist.permissions.ExperimentalPermissionsApi
     import com.google.accompanist.permissions.isGranted
     import com.google.accompanist.permissions.rememberPermissionState
@@ -133,8 +135,8 @@
                         "charity_location" to post.charity_location,
                         "item_amount" to post.item_amount,
                         "item_name" to post.item_name,
-                        "imageId" to imageRef.path.toString()
-//                        "isClaimed" to
+                        "imageId" to imageRef.path.toString(),
+                        "isClaimed" to post.isClaimed
 //                    "userId" to FirebaseAuth.getInstance().currentUser?.uid.toString(),
                     )
                     Log.d(TAG, "daata: " + data)
@@ -263,7 +265,7 @@
     //PostViewModel
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun PostScreen() {
+    fun PostScreen(navController: NavController) {
         val postViewModel: PostViewModel = viewModel<PostViewModel>();
         val selectedItems = remember { mutableStateListOf<Pair<Inventory_Item, Int>>() }
         val posts = remember { mutableStateListOf<Post>() }
@@ -437,19 +439,22 @@
                                     287.4,
                                     newPosts[0].first.name,
                                     newPosts[0].second.toDouble(),
-                                    newPosts[0].first.imageBitmap
+                                    newPosts[0].first.imageBitmap,
+
                                 )
                                 Log.d(TAG, "in loop post" + post)
                                 postViewModel.addPost(post)
                             }
 
                             selectedItems.clear()
+
 //                            postViewModel.onCharityNameTextChange("");
 //                            postViewModel.onCharityLocationTextChange("");
                         } else {
                             showError = true
                         }
                     }
+                    navController.navigate(Screens.Charity.name)
                 },
                 enabled = selectedItems.isNotEmpty() && selectedItems.all { it.second > 0 }
             ) {
@@ -512,20 +517,6 @@
             }
         }
     }
-
-
-    //@RequiresApi(Build.VERSION_CODES.P)
-    @Preview
-    @Composable
-    fun PreviewPostScreen() {
-        PostScreen()
-    }
-
-
-
-
-
-
 
     @OptIn(ExperimentalPermissionsApi::class)
     @Composable

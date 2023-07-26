@@ -206,7 +206,7 @@ fun App() {
                             FinanceStatsScreen()
                         }
                         composable(route = Screens.Donate.name){
-                            PostScreen()
+                            PostScreen(navController)
                         }
                         composable(route = Screens.Marketplace.name){
                             MarketScreen(navController)
