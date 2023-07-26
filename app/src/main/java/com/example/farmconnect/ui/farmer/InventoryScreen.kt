@@ -1,5 +1,5 @@
 package com.example.farmconnect.ui.farmer
-
+// reference for speech to text: https://github.com/akash251/Speech_To_Text_In_Compose
 import android.Manifest
 import android.R
 import android.app.Activity
