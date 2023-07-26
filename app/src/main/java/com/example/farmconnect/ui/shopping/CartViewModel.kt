@@ -55,6 +55,7 @@ class CartViewModel: ViewModel() {
                 // add new field for this farmer
                 financeColRef.add(
                     hashMapOf("items" to listOf(data), "userId" to item.userId)
+
                 );
 
             } else {
