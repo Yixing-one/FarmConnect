@@ -48,9 +48,14 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 
 class MainViewModel: ViewModel() {
@@ -98,31 +103,42 @@ class MainViewModel: ViewModel() {
                 .get()
                 .await()
 
-            val marketItems = ArrayList<MarketplaceItem>()
+            // Initialize list to store Jobs
+            val jobs = mutableListOf<Job>()
+
+            // Mutable list to store MarketplaceItem
+            val marketItems = mutableListOf<MarketplaceItem>()
 
             for (document in documents) {
-                val docData = document.data
-                val storageRef = storage.reference
-                val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+                jobs.add(GlobalScope.launch {
+                    val docData = document.data
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
 
-                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
-                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    val TEN_MEGABYTE:Long = 1024 * 1024 * 10
+                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
-                if(docData.getValue("quantityRemaining").toString().toInt() > 0){
-                    marketItems.add(
-                        MarketplaceItem(
-                            id = document.id.toString(),
-                            name = docData.getValue("name").toString(),
-                            price = docData.getValue("price").toString().toDouble(),
-                            quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
-                            imageBitmap = imageBitmap,
-                            userId = docData.getValue("userId").toString()
-                        )
-                    )
-                }
-
+                    // Ensure that the items are added in the Main thread if you plan to update the UI immediately
+                    withContext(Dispatchers.Main) {
+                        if(docData.getValue("quantityRemaining").toString().toInt() > 0){
+                            marketItems.add(
+                                MarketplaceItem(
+                                    id = document.id.toString(),
+                                    name = docData.getValue("name").toString(),
+                                    price = docData.getValue("price").toString().toDouble(),
+                                    quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
+                                    imageBitmap = imageBitmap,
+                                    userId = docData.getValue("userId").toString()
+                                )
+                            )
+                        }
+                    }
+                })
             }
+
+            // Wait for all jobs to complete
+            jobs.joinAll()
 
             _items.emit(marketItems.toList())
 
@@ -133,6 +149,7 @@ class MainViewModel: ViewModel() {
             isLoading.emit(false)
         }
     }
+
 
     fun onSearchTextChange(text: String){
         _searchText.value = text

@@ -11,6 +11,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,14 +51,18 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 class EditMarketPlaceViewModel: ViewModel() {
     private val db = Firebase.firestore
@@ -119,26 +124,33 @@ class EditMarketPlaceViewModel: ViewModel() {
 
             val marketItems = ArrayList<MarketPlaceItem>()
 
-            for (document in documents) {
-                val docData = document.data
-                val storageRef = storage.reference
-                val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+            // Launch concurrent coroutines for image downloading
+            val jobs = documents.documents.map { document ->
+                GlobalScope.launch {
+                    val docData = document.data
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child(docData?.getValue("imageUrl").toString())
+                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
+                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
-                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
-                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-
-                marketItems.add(
-                    MarketPlaceItem(
-                        documentId = document.id,
-                        name = docData.getValue("name").toString(),
-                        price = docData.getValue("price").toString().toDouble(),
-                        quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
-                        quantitySold = docData.getValue("quantitySold").toString().toInt(),
-                        imageBitmap = imageBitmap
-                    )
-                )
+                    withContext(Dispatchers.Main) {
+                        marketItems.add(
+                            MarketPlaceItem(
+                                documentId = document.id,
+                                name = docData?.getValue("name").toString(),
+                                price = docData?.getValue("price").toString().toDouble(),
+                                quantityRemaining = docData?.getValue("quantityRemaining").toString().toInt(),
+                                quantitySold = docData?.getValue("quantitySold").toString().toInt(),
+                                imageBitmap = imageBitmap
+                            )
+                        )
+                    }
+                }
             }
+
+            // Await all download jobs to finish
+            jobs.joinAll()
 
             _items.emit(marketItems.toList())
 
@@ -402,6 +414,7 @@ fun EditMarketScreen(navController: NavController) {
     val viewModel = viewModel<EditMarketPlaceViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     // State for the Snackbar message
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
@@ -412,87 +425,100 @@ fun EditMarketScreen(navController: NavController) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Row {
-            TextField(
-                value = searchText,
-                onValueChange = viewModel::onSearchTextChange,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(text = "Search") },
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row {
-            Button(
-                onClick = { navController.navigate(Screens.Marketplace.name) },
-                colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
+        if (isLoading) {
+            Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(text = "View Postings")
+                CircularProgressIndicator() // Show loading indicator
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Button(
-                onClick = { navController.navigate(Screens.AddPostingMarketplace.name) },
-                colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                Text(text = "Add Postings")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 128.dp)
-        ) {
-            items(theFoodItems.size) { item ->
-                // Capture the value returned by EditMarketItemCard
-                val isSaveButtonClicked = EditMarketItemCard(
-                    viewModel = viewModel,
-                    item = theFoodItems.get(item),
-                    modifier = Modifier.padding(8.dp)
+        } else {
+            Row {
+                TextField(
+                    value = searchText,
+                    onValueChange = viewModel::onSearchTextChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(text = "Search") },
                 )
+            }
 
-                // Show Snackbar if the save button was clicked
-                if (isSaveButtonClicked) {
-                    snackbarMessage = "${theFoodItems.get(item).name} was successfully saved!"
-                    // Show the Snackbar using SnackbarHostState
-                    LaunchedEffect(snackbarMessage) {
-                        snackbarHostState.showSnackbar(
-                            message = snackbarMessage!!,
-                            duration = SnackbarDuration.Short
-                        )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row {
+                Button(
+                    onClick = { navController.navigate(Screens.Marketplace.name) },
+                    colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    Text(text = "View Postings")
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Button(
+                    onClick = { navController.navigate(Screens.AddPostingMarketplace.name) },
+                    colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    Text(text = "Add Postings")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 128.dp)
+            ) {
+                items(theFoodItems.size) { item ->
+                    // Capture the value returned by EditMarketItemCard
+                    val isSaveButtonClicked = EditMarketItemCard(
+                        viewModel = viewModel,
+                        item = theFoodItems.get(item),
+                        modifier = Modifier.padding(8.dp)
+                    )
+
+                    // Show Snackbar if the save button was clicked
+                    if (isSaveButtonClicked) {
+                        snackbarMessage = "${theFoodItems.get(item).name} was successfully saved!"
+                        // Show the Snackbar using SnackbarHostState
+                        LaunchedEffect(snackbarMessage) {
+                            snackbarHostState.showSnackbar(
+                                message = snackbarMessage!!,
+                                duration = SnackbarDuration.Short
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(150.dp))
-    }
+            Spacer(modifier = Modifier.height(150.dp))
 
-    // Show the Snackbar using SnackbarHostState
-    SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = Modifier.padding(16.dp)
-    ){
 
-    val messageState = rememberUpdatedState(snackbarMessage)
+            // Show the Snackbar using SnackbarHostState
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(16.dp)
+            ) {
 
-    Snackbar(
-            action = {
-                TextButton(onClick = { snackbarHostState.currentSnackbarData?.dismiss() }) {
-                    Text("Dismiss")
+                val messageState = rememberUpdatedState(snackbarMessage)
+
+                Snackbar(
+                    action = {
+                        TextButton(onClick = { snackbarHostState.currentSnackbarData?.dismiss() }) {
+                            Text("Dismiss")
+                        }
+                    }
+                ) {
+                    Text(messageState.value!!)
                 }
             }
-        ) {
-            Text(messageState.value!!)
         }
     }
 
