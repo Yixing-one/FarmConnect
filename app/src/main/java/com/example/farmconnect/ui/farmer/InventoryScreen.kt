@@ -73,6 +73,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.example.farmconnect.SpeechRecognizerContract
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -91,6 +92,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import com.example.farmconnect.data.Inventory_Item
 import com.example.farmconnect.data.Inventory_Items
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.QueryDocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import java.io.ByteArrayOutputStream
@@ -219,6 +221,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+//    fun updateInventory(itemName: String, increment: Int) {
+//        viewModelScope.launch {
+//            // Query Firestore to find the document that contains the item and belongs to the current user
+//            val querySnapshot = db.collection("inventory")
+//                .whereEqualTo("userID", currentUserId)
+////                .whereEqualTo("name", itemName)
+//                .get()
+//                .await()
+//            Log.d(TAG, "Increment Value: $increment")
+//            // Check if a document was found
+//            if (!querySnapshot.isEmpty) {
+//                // Get the first document from the results (there should be only one document that matches the query)
+//                val doc = querySnapshot.documents[0]
+//
+//                // Update the quantity of the item
+//                doc.reference.update(
+//                    "items.$itemName",
+//                    FieldValue.increment(increment.toLong())
+//                )
+//            } else {
+//                Log.d("TAG,", "No document found for item: $itemName")
+//            }
+//        }
+//    }
+suspend fun updateQuanity(documentID: String, increment: Int) {
+    val inventoryDocuments = db.collection("inventory")
+
+    if (documentID != null) {
+        val docData = inventoryDocuments.document(documentID).get().await().data;
+        var quantity = docData?.getValue("quantity").toString().toInt()
+        quantity += increment
+        inventoryDocuments.document(documentID).update("quantity", quantity).await();
+        this.loadItems()
+    }
+}
+
     private fun launchImageDownloadJobs(documents: QuerySnapshot): MutableList<Job> {
         val jobs = mutableListOf<Job>()
         for (i in 0 until documents.size() step 1) {
@@ -263,31 +301,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 
-@OptIn(ExperimentalPermissionsApi::class, ExperimentalGlideComposeApi::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalGlideComposeApi::class,
+    ExperimentalMaterial3Api::class
+)
 @Composable
-fun ItemCard(item: Inventory_Item, modifier: Modifier = Modifier) {
+fun ItemCard(item: Inventory_Item, viewModel: MainViewModel, modifier: Modifier = Modifier) {
+    val theMainViewModel = viewModel<MainViewModel>()
 
     val permissionState = rememberPermissionState(permission = Manifest.permission.RECORD_AUDIO)
     SideEffect {
         permissionState.launchPermissionRequest()
     }
-    /*
+
+
+//    theMainViewModel.viewModelScope.launch {
     val speechRecognizerLauncher = rememberLauncherForActivityResult(
         contract = SpeechRecognizerContract(),
-        onResult = {
-            //make DB call to update inventory for specific item
-            // add toast message to show updated item value
-            Log.d("TAG,", "val is: " + it.toString());
-        }
-    )*/
+        onResult = { result ->
+            println(result)
+            println("dsfhkghifshjgiosdgiosjgdfiosjgdiodsjgiosdjgiodjfgiosdgj")
+            val spokenText = result?.get(0)
+            val increment = spokenText!!.split(" ")[0].toInt()
+            if (increment != null && item.documentId != null) {
+                viewModel.viewModelScope.launch {
+                    viewModel.updateQuanity(item.documentId, increment)
+                }
 
-    Card(
+            };
+        }
+
+    )
+
+                Card(
         modifier = modifier
             .width(150.dp)
             .height(230.dp)
             .clickable {
                 if (permissionState.status.isGranted) {
-                   // speechRecognizerLauncher.launch(Unit)
+                     speechRecognizerLauncher.launch(Unit)
                 } else
                     permissionState.launchPermissionRequest()
             }
@@ -649,6 +700,7 @@ fun InventoryScreen(){
                 items(viewModel.items.value.size) { item ->
                     ItemCard(
                         item = viewModel.items.value.get(item),
+                        viewModel,
                         modifier = Modifier.padding(8.dp)
                     )
                 }

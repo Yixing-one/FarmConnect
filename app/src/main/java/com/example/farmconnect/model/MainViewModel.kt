@@ -1,5 +1,7 @@
 package com.example.farmconnect.model
 
+import android.graphics.Bitmap
+import android.graphics.Picture
 import androidx.annotation.DrawableRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -44,8 +46,12 @@ class MainViewModel: ViewModel() {
 data class Item(
     val name: String,
     val price: Double,
-    @DrawableRes val imageId: Int
+    val quantity: Int,
+    val imageBitmap: Bitmap
+
+//    @DrawableRes val imageId: Int
 ) {
+
     fun doesMatchSearchQuery(query: String): Boolean {
         val matchingCombinations = listOf(
             "$name",
@@ -60,21 +66,25 @@ private val allItems = listOf(
     Item(
         name = "Green Apple",
         price = 4.55,
-        imageId = R.drawable.myimage
+                quantity = 71,
+        imageBitmap = Bitmap.createBitmap(Picture())
     ),
     Item(
         name = "Red Apple",
         price = 3.99,
-        imageId = R.drawable.myimage
+                quantity = 71,
+        imageBitmap = Bitmap.createBitmap(Picture())
     ),
     Item(
         name = "Mango",
         price = 15.34,
-        imageId = R.drawable.myimage
+                quantity = 71,
+        imageBitmap = Bitmap.createBitmap(Picture())
     ),
     Item(
         name = "Carrot",
         price = 8.25,
-        imageId = R.drawable.myimage
+        quantity = 71,
+        imageBitmap = Bitmap.createBitmap(Picture())
     ),
 )
