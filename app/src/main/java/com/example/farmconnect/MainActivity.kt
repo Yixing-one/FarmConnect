@@ -63,7 +63,9 @@ class MainActivity : ComponentActivity() {
                     .whereEqualTo("userId", currentUserId)
                     .get()
                     .await()
-                user_role.value = documents.documents[0].data?.getValue("role").toString()
+                if(documents.size() > 0) {
+                    user_role.value = documents.documents[0].data?.getValue("role").toString()
+                }
             }
             // show homepage screen
             Log.d(TAG, "HomePage screen")
