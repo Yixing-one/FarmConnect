@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -65,9 +66,14 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 
 data class Post(
@@ -132,51 +138,57 @@ class FarmViewModel: ViewModel() {
         isLoading.emit(true) // Start loading
         try {
             //remove all the item in the local cache
-//            Post.item_list = mutableListOf<Inventory_Item>()
             Log.d(TAG, "load items func")
 
             val documents = db.collection("charityPosts")
-//                .whereEqualTo("userId", currentUserId)
                 .get()
                 .await()
 
             Log.d(TAG, "documents: " + documents.toString())
 
+            // Initialize empty list to store Jobs
+            val jobs = mutableListOf<Job>()
 
-            val charityItems = ArrayList<Post>()
+            // Mutable list to store Post
+            val charityItems = mutableListOf<Post>()
             Log.d(TAG, "charityItems: " + charityItems)
-
 
             //load all the items from database to local cache
             for (document in documents) {
                 Log.d(TAG, "entered loop document: ")
 
-                val docData = document.data
-                Log.d(TAG, "docData: " + docData.toString())
+                jobs.add(GlobalScope.launch {
+                    val docData = document.data
+                    Log.d(TAG, "docData: " + docData.toString())
 
-                val storageRef = storage.reference
-                val imageRef = storageRef.child(docData.getValue("imageId").toString())
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child(docData.getValue("imageId").toString())
 
-                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
-                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    val TEN_MEGABYTE:Long = 1024 * 1024 * 10
+                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
-                charityItems.add(
-                    Post(
-//                        documentId = document.id,
-                        charity_name = docData.getValue("charity_name").toString(),
-                        charity_location = docData.getValue("charity_location").toString(),
-                        charity_distance = docData.getValue("charity_distance").toString().toDouble(),
-                        item_name = docData.getValue("item_name").toString(),
-                        item_amount = docData.getValue("item_amount").toString().toDouble(),
-                        imageBitmap = imageBitmap
-                    )
-                )
+                    // Make sure to add items on main thread if you are going to update UI immediately
+                    withContext(Dispatchers.Main) {
+                        charityItems.add(
+                            Post(
+                                charity_name = docData.getValue("charity_name").toString(),
+                                charity_location = docData.getValue("charity_location").toString(),
+                                charity_distance = docData.getValue("charity_distance").toString().toDouble(),
+                                item_name = docData.getValue("item_name").toString(),
+                                item_amount = docData.getValue("item_amount").toString().toDouble(),
+                                imageBitmap = imageBitmap
+                            )
+                        )
+                    }
+                })
             }
             Log.d(TAG, "exit loop")
 
+            // Wait for all jobs to complete
+            jobs.joinAll()
+
             _posts.emit(charityItems.toList())
-//            _posts.emit(Inventory_Items.item_list.toList())
 
         } catch (exception: Exception) {
             isLoading.emit(false)
@@ -291,6 +303,8 @@ fun CharityModeScreen(){
     val viewModel = viewModel<FarmViewModel>()
     val charityPosts by viewModel.posts.collectAsState()
     val searchText by viewModel.searchText.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
     Log.d(TAG, "charityMODeScreen")
 
     Column(
@@ -298,56 +312,68 @@ fun CharityModeScreen(){
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(darkGreen)
-                .height(100.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Charity Mode",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            )
-            Log.d(TAG, "charity mode label")
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator() // Show loading indicator
+            }
 
-        }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(darkGreen)
+                    .height(100.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Charity Mode",
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                Log.d(TAG, "charity mode label")
 
-        Spacer(modifier = Modifier.height(10.dp))
+            }
 
-        Row{
-            TextField(
-                value = searchText,
-                onValueChange = viewModel::onSearchTextChange,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {Text(text = "Search")},
-            )
-        }
+            Spacer(modifier = Modifier.height(10.dp))
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)){
-            items(charityPosts.size){item ->
-                PostCard(
-                    post = charityPosts.get(item),
-                    modifier = Modifier.padding(8.dp)
+            Row {
+                TextField(
+                    value = searchText,
+                    onValueChange = viewModel::onSearchTextChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(text = "Search") },
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.height(20.dp))
-        Image(
-            painter = painterResource(id = R.drawable.plus_sign),
-            contentDescription = "image",
-            modifier = Modifier
-                .padding(350.dp, 20.dp)
-                .height(80.dp)
-                .width(85.dp),
-            contentScale = ContentScale.Fit
-        )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp)) {
+                items(charityPosts.size) { item ->
+                    PostCard(
+                        post = charityPosts.get(item),
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            Image(
+                painter = painterResource(id = R.drawable.plus_sign),
+                contentDescription = "image",
+                modifier = Modifier
+                    .padding(350.dp, 20.dp)
+                    .height(80.dp)
+                    .width(85.dp),
+                contentScale = ContentScale.Fit
+            )
+        }
     }
 }
 
