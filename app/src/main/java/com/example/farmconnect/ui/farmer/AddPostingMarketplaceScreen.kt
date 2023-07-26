@@ -1,6 +1,7 @@
 package com.example.farmconnect.ui.farmer
 
 import android.app.Application
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -155,13 +156,14 @@ class AddPostingViewModel() : ViewModel() {
         internet_available = false
     }
 
-    fun updateInventoryQuantity(docId: String, quantityRemaining: Double) {
+    fun updateInventoryQuantity(docId: String, quantityRemaining: Int) {
         viewModelScope.launch {
             isLoading.emit(true) // Start loading
             try {
+                Log.d(TAG, "This is the quantity remaining " + quantityRemaining)
                 db.collection("inventory")
                     .document(docId)
-                    .update("quantity", FieldValue.increment(-quantityRemaining))
+                    .update("quantity", quantityRemaining)
                     .addOnSuccessListener {
                         // Update the item locally in the _items StateFlow
 //                        _items.value = _items.value.map { if (it.documentId == docId) it.copy(quantity = quantityRemaining.toInt()) else it }
@@ -209,7 +211,8 @@ class AddPostingViewModel() : ViewModel() {
                             name = name,
                             price = price,
                             quantity = quantity,
-                            imageBitmap = imageBitmap
+                            imageBitmap = imageBitmap,
+                            documentId = docId
                         )
                     )
                 }
@@ -277,7 +280,7 @@ fun addMarketplaceItemToFirestore(
                 "imageUrl" to imageRef.path.toString()
             )
             marketplaceColRef.add(data).addOnSuccessListener {
-                viewModel.updateInventoryQuantity(docId, quantity.toDouble())
+                viewModel.updateInventoryQuantity(docId, inventoryQuantity - quantity)
             }
         }
     }
