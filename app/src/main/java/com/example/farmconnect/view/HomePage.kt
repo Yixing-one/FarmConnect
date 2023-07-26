@@ -97,6 +97,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.example.farmconnect.data.user_role
 import com.example.farmconnect.ui.farmer.AddPostingsMarketScreen
 import com.example.farmconnect.ui.farmer.EditMarketScreen
 import com.example.farmconnect.ui.farmer.EditMarketplaceScreen
@@ -111,10 +112,7 @@ class HomePage : ComponentActivity() {
         setContent {
             FarmConnectTheme {
                 // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     App()
                 }
             }
@@ -129,20 +127,18 @@ enum class Screens(@StringRes val title: Int) {
     Finance(title = R.string.finance),
     Marketplace(title = R.string.marketplace),
     EditMarketplace(title = R.string.edit_marketplace),
-    AddPostingMarketplace(title = R.string.add_marketplace),
+    AddPostingMarketplace(title=R.string.add_marketplace),
     Donate(title = R.string.donate),
-
-    //Charity mode screens:
+    //    Charity mode screens:
     Charity(title = R.string.charity),
-
-    //Ecommerce center screens:
-    Shopping(title = R.string.shopping),
+    //    Ecommerce center screens:
+    Shopping(title= R.string.shopping),
     Cart(title = R.string.cart),
-
-    //Settings screen
-    Settings(title = R.string.settings)
+    //    Settings screen
+    Settings(title= R.string.settings)
 }
 
+lateinit var currentScreen: Screens
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -150,9 +146,27 @@ fun App() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     // Get the name of the current screen
-    val currentScreen = Screens.valueOf(
-        backStackEntry?.destination?.route ?: Screens.Farm.name
-    )
+    Log.d("TAGscreen,", user_role.value);
+    if(user_role.value == "FARMER") {
+        currentScreen = Screens.valueOf(
+            backStackEntry?.destination?.route ?: Screens.Farm.name
+        )
+    } else if (user_role.value == "CHARITY") {
+        Log.d("TAGscreen,", "2");
+        currentScreen = Screens.valueOf(
+            backStackEntry?.destination?.route ?: Screens.Charity.name
+        )
+    } else if (user_role.value == "BUYER") {
+        Log.d("TAGscreen,", "3");
+        currentScreen = Screens.valueOf(
+            backStackEntry?.destination?.route ?: Screens.Shopping.name
+        )
+    } else {
+        Log.d("TAGscreen,", "4");
+        currentScreen = Screens.valueOf(
+            backStackEntry?.destination?.route ?: Screens.Farm.name
+        )
+    }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val cartViewModel = viewModel<CartViewModel>();
@@ -163,17 +177,16 @@ fun App() {
     SideEffect {
         cameraPermissionState.launchPermissionRequest()
     }
-    val cameraLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { result ->
-            if (result) {
-                Log.d("TAG,", "camera works ");
-                // Picture was taken successfully
-                // Do something with the picture
-            } else {
-                // Picture capture was canceled or failed
-                // Handle the failure or cancellation
-            }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { result ->
+        if (result) {
+            Log.d("TAG,", "camera works ");
+            // Picture was taken successfully
+            // Do something with the picture
+        } else {
+            // Picture capture was canceled or failed
+            // Handle the failure or cancellation
         }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -185,64 +198,59 @@ fun App() {
             topBar = {
                 val showShoppingCart = currentScreen == Screens.Shopping
                 val showCloseIcon = currentScreen == Screens.Cart
-                AppBar(
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                    showShoppingCart,
-                    showCloseIcon,
-                    navController,
-                    cartViewModel
-                )
+                AppBar(onMenuClick = { scope.launch { drawerState.open() } }, showShoppingCart, showCloseIcon, navController, cartViewModel)
             },
             floatingActionButtonPosition = FabPosition.End
-        ) { paddingValues ->
+        ) {
+                paddingValues ->
 
-            Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 5.dp, vertical = 5.dp)
-            ) {
+            Surface(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 5.dp, vertical = 5.dp)
+            ){
                 Column() {
                     NavHost(
                         navController = navController,
-                        startDestination = Screens.Farm.name
+                        //startDestination = Screens.Farm.name
+                        startDestination = currentScreen.name
 
-                    ) {
-                        //Farm mode:
-                        composable(route = Screens.Farm.name) {
+                    ){
+//                  Farm mode:
+                        composable(route = Screens.Farm.name){
                             FarmModeScreen(navController)
                         }
-                        composable(route = Screens.Inventory.name) {
+                        composable(route = Screens.Inventory.name){
                             InventoryScreen()
                         }
-                        composable(route = Screens.Finance.name) {
+                        composable(route = Screens.Finance.name){
                             FinanceStatsScreen()
                         }
-                        composable(route = Screens.Donate.name) {
+                        composable(route = Screens.Donate.name){
                             PostScreen(navController)
                         }
-                        composable(route = Screens.Marketplace.name) {
+                        composable(route = Screens.Marketplace.name){
                             MarketScreen(navController)
                         }
-                        composable(route = Screens.EditMarketplace.name) {
+                        composable(route = Screens.EditMarketplace.name){
                             EditMarketScreen(navController)
                         }
                         composable(route = Screens.AddPostingMarketplace.name) {
                             AddPostingsMarketScreen(navController)
                         }
-                        //Charity mode:
-                        composable(route = Screens.Charity.name) {
+//                  Charity mode:
+                        composable(route = Screens.Charity.name){
                             CharityModeScreen()
                         }
-                        //E-commerce center:
-                        composable(route = Screens.Shopping.name) {
+//                  E-commerce center:
+                        composable(route = Screens.Shopping.name){
                             ShoppingCenterScreen(cartViewModel)
                         }
-                        composable(route = Screens.Cart.name) {
+                        composable(route = Screens.Cart.name){
                             CartScreen(cartViewModel, navController)
                         }
-                        //Settings
-                        composable(route = Screens.Settings.name) {
+//                    Settings
+                        composable(route = Screens.Settings.name){
                             SettingsScreen()
                         }
                     }

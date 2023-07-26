@@ -20,10 +20,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.farmconnect.data.user_role
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.example.farmconnect.view.HomePage
 import com.example.farmconnect.view.SignIn
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 
 
 class MainActivity : ComponentActivity() {
@@ -51,6 +56,15 @@ class MainActivity : ComponentActivity() {
             finish()
 
         } else {
+            var db = Firebase.firestore
+            val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
+            runBlocking {
+                val documents = db.collection("userRole")
+                    .whereEqualTo("userId", currentUserId)
+                    .get()
+                    .await()
+                user_role.value = documents.documents[0].data?.getValue("role").toString()
+            }
             // show homepage screen
             Log.d(TAG, "HomePage screen")
             startActivity(Intent(this, HomePage::class.java))
@@ -88,4 +102,3 @@ fun MainActPreview() {
         MainAct("Android")
     }
 }
-

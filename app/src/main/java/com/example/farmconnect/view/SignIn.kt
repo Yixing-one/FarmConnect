@@ -1,10 +1,12 @@
 package com.example.farmconnect.view
 
 import android.content.ContentValues.TAG
+import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.os.Bundle
 import android.util.Log
+import android.widget.RadioGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -12,26 +14,39 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.startActivity
 import com.example.farmconnect.R
+import com.example.farmconnect.data.user_role
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.Identity
@@ -40,7 +55,98 @@ import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider.getCredential
+import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 
+var load_home = false
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+//add a pop-up dialog getting the user select which mode they want to be in
+fun get_user_mode(context: Context, homepage: Class<HomePage>){
+    var showDialog = remember { mutableStateOf(true) }
+    var role = ""
+    var db = Firebase.firestore
+    var currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
+    val inventoryColRef = db.collection("userRole");
+    var documents: QuerySnapshot
+    runBlocking {
+        documents = db.collection("userRole")
+            .whereEqualTo("userId", currentUserId)
+            .get()
+            .await()
+    }
+    if (documents.size() != 0) {
+        user_role.value = documents.documents[0].data?.getValue("role").toString()
+        context.startActivity(Intent(context, homepage))
+        return
+    }
+
+    if(showDialog.value) {
+        val radioOptions = listOf("Manage our farm production", "Buy organic and affordable farm products", "We are charity looking for food donation")
+        val (selectedOption, onOptionSelected) = remember { mutableStateOf(radioOptions[0]) }
+        AlertDialog(
+            onDismissRequest = { showDialog.value = false },
+            title = { Text("What you are looking to achieve with FarmConnect?",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.DarkGray)},
+            text = {
+                Column(Modifier.selectableGroup()) {
+                    radioOptions.forEach { text ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .selectable(
+                                    selected = (text == selectedOption),
+                                    onClick = { onOptionSelected(text) },
+                                    role = Role.RadioButton
+                                )
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (text == selectedOption),
+                                onClick = null // null recommended for accessibility with screenreaders
+                            )
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+
+            },
+
+            confirmButton = {
+                Button(onClick = {
+                    if(selectedOption == "Manage our farm production") {
+                        role = "FARMER"
+                    } else if (selectedOption == "Buy organic and affordable farm products") {
+                        role = "BUYER"
+                    } else {
+                        role = "CHARITY"
+                    }
+                    user_role.value = role
+
+                    val data = hashMapOf(
+                        "role" to role,
+                        "userId" to currentUserId
+                    )
+                    inventoryColRef.add(data)
+                    context.startActivity(Intent(context, homepage))
+                    showDialog.value = false
+                }){Text("OK")}
+            }
+        )
+    }
+}
 
 class SignIn : ComponentActivity() {
 
@@ -121,8 +227,14 @@ class SignIn : ComponentActivity() {
                                 if (task.isSuccessful) {
                                     // Sign in success, update UI with the signed-in user's information
                                     Log.d(TAG, "signInWithCredential:success")
-                                    startActivity(Intent(this, HomePage::class.java))
-                                    finish()
+                                    setContent {
+                                        get_user_mode(this, HomePage::class.java)
+                                    }
+                                    if(load_home) {
+                                        Log.d("TAGsign", "starthome");
+                                        startActivity(Intent(this, HomePage::class.java))
+                                        finish()
+                                    }
                                 } else {
                                     // If sign in fails, display a message to the user.
                                     Log.w(TAG, "signInWithCredential:failure", task.exception)
@@ -174,13 +286,13 @@ fun SignInScreen(name: String, modifier: Modifier = Modifier, signIn: () -> Unit
         Button(
             onClick = signIn,
             Modifier
-                .width(270.dp)
+                .width(280.dp)
                 .height(60.dp)
                 .shadow(5.dp, RoundedCornerShape(4.dp)),
             shape = RoundedCornerShape(1.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color.White)
         ) {
-            Row(modifier = Modifier.padding(8.dp)) {
+            Row(modifier = Modifier.padding(8.dp).width(280.dp)) {
                 Image(
                     painter = painterResource(id = R.drawable.google_logo),
                     contentDescription = "Google Logo",
@@ -206,3 +318,4 @@ fun SignInScreenPreview() {
         SignInScreen("Android", signIn = {})
     }
 }
+
