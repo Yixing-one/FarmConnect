@@ -111,7 +111,10 @@ class HomePage : ComponentActivity() {
         setContent {
             FarmConnectTheme {
                 // A surface container using the 'background' color from the theme
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
                     App()
                 }
             }
@@ -126,15 +129,18 @@ enum class Screens(@StringRes val title: Int) {
     Finance(title = R.string.finance),
     Marketplace(title = R.string.marketplace),
     EditMarketplace(title = R.string.edit_marketplace),
-    AddPostingMarketplace(title=R.string.add_marketplace),
+    AddPostingMarketplace(title = R.string.add_marketplace),
     Donate(title = R.string.donate),
-    //    Charity mode screens:
+
+    //Charity mode screens:
     Charity(title = R.string.charity),
-    //    Ecommerce center screens:
-    Shopping(title= R.string.shopping),
+
+    //Ecommerce center screens:
+    Shopping(title = R.string.shopping),
     Cart(title = R.string.cart),
-    //    Settings screen
-    Settings(title= R.string.settings)
+
+    //Settings screen
+    Settings(title = R.string.settings)
 }
 
 
@@ -157,16 +163,17 @@ fun App() {
     SideEffect {
         cameraPermissionState.launchPermissionRequest()
     }
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { result ->
-        if (result) {
-            Log.d("TAG,", "camera works ");
-            // Picture was taken successfully
-            // Do something with the picture
-        } else {
-            // Picture capture was canceled or failed
-            // Handle the failure or cancellation
+    val cameraLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { result ->
+            if (result) {
+                Log.d("TAG,", "camera works ");
+                // Picture was taken successfully
+                // Do something with the picture
+            } else {
+                // Picture capture was canceled or failed
+                // Handle the failure or cancellation
+            }
         }
-    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -178,58 +185,64 @@ fun App() {
             topBar = {
                 val showShoppingCart = currentScreen == Screens.Shopping
                 val showCloseIcon = currentScreen == Screens.Cart
-                AppBar(onMenuClick = { scope.launch { drawerState.open() } }, showShoppingCart, showCloseIcon, navController, cartViewModel)
+                AppBar(
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    showShoppingCart,
+                    showCloseIcon,
+                    navController,
+                    cartViewModel
+                )
             },
             floatingActionButtonPosition = FabPosition.End
-        ) {
-                paddingValues ->
+        ) { paddingValues ->
 
-            Surface(modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 5.dp, vertical = 5.dp)
-            ){
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 5.dp, vertical = 5.dp)
+            ) {
                 Column() {
                     NavHost(
                         navController = navController,
                         startDestination = Screens.Farm.name
 
-                    ){
-//                  Farm mode:
-                        composable(route = Screens.Farm.name){
+                    ) {
+                        //Farm mode:
+                        composable(route = Screens.Farm.name) {
                             FarmModeScreen(navController)
                         }
-                        composable(route = Screens.Inventory.name){
+                        composable(route = Screens.Inventory.name) {
                             InventoryScreen()
                         }
-                        composable(route = Screens.Finance.name){
+                        composable(route = Screens.Finance.name) {
                             FinanceStatsScreen()
                         }
-                        composable(route = Screens.Donate.name){
+                        composable(route = Screens.Donate.name) {
                             PostScreen(navController)
                         }
-                        composable(route = Screens.Marketplace.name){
+                        composable(route = Screens.Marketplace.name) {
                             MarketScreen(navController)
                         }
-                        composable(route = Screens.EditMarketplace.name){
+                        composable(route = Screens.EditMarketplace.name) {
                             EditMarketScreen(navController)
                         }
                         composable(route = Screens.AddPostingMarketplace.name) {
                             AddPostingsMarketScreen(navController)
                         }
-//                  Charity mode:
-                        composable(route = Screens.Charity.name){
+                        //Charity mode:
+                        composable(route = Screens.Charity.name) {
                             CharityModeScreen()
                         }
-//                  E-commerce center:
-                        composable(route = Screens.Shopping.name){
+                        //E-commerce center:
+                        composable(route = Screens.Shopping.name) {
                             ShoppingCenterScreen(cartViewModel)
                         }
-                        composable(route = Screens.Cart.name){
+                        composable(route = Screens.Cart.name) {
                             CartScreen(cartViewModel, navController)
                         }
-//                    Settings
-                        composable(route = Screens.Settings.name){
+                        //Settings
+                        composable(route = Screens.Settings.name) {
                             SettingsScreen()
                         }
                     }

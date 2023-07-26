@@ -48,7 +48,7 @@ import java.util.Locale
 
 //credits: https://maneesha-erandi.medium.com/kotlin-with-jetpack-compose-data-tables-c28faf4334d9
 
-class FinanceViewModel: ViewModel() {
+class FinanceViewModel : ViewModel() {
     private val db = Firebase.firestore
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
 
@@ -62,11 +62,11 @@ class FinanceViewModel: ViewModel() {
     }
 
     private suspend fun loadItems() {
-        try{
+        try {
             val financeItems = db.collection("finance")
                 .whereEqualTo("userId", currentUserId)
                 .get()
-                .await().documents[0].data?.getValue("items") as List<HashMap<*,*>>
+                .await().documents[0].data?.getValue("items") as List<HashMap<*, *>>
 
             val itemsList = mutableListOf<TableItem>()
             for (item in financeItems) {
@@ -113,17 +113,17 @@ fun RowScope.Cell(
 
 
 @Composable
-fun DataTable(){
+fun DataTable() {
 
     val viewModel = viewModel<FinanceViewModel>()
     val financeItems by viewModel.items.collectAsState()
 
-    LazyColumn(Modifier.padding(vertical = 10.dp)){
+    LazyColumn(Modifier.padding(vertical = 10.dp)) {
         item {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
-            ){
+            ) {
                 Cell(
                     text = "Item",
                     alignment = TextAlign.Left,
@@ -173,7 +173,10 @@ fun DataTable(){
                     weight = .15f
                 )
                 Cell(
-                    text = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(item.dateSold.toDate()),
+                    text = SimpleDateFormat(
+                        "dd MMMM yyyy",
+                        Locale.getDefault()
+                    ).format(item.dateSold.toDate()),
                     alignment = TextAlign.Center,
                     weight = .3f
                 )
@@ -195,22 +198,23 @@ fun DataTable(){
 }
 
 @Composable
-fun FinanceStatsScreen(){
+fun FinanceStatsScreen() {
 
     val viewModel = viewModel<FinanceViewModel>()
     val financeItems by viewModel.items.collectAsState()
 
 
-    fun totalRevenue(): Double{
+    fun totalRevenue(): Double {
         var total: Double = 0.0
-        financeItems.forEach { item  ->
+        financeItems.forEach { item ->
             total += item.revenue
         }
         return total
     }
+
     fun totalQuantity(): Double {
         var total: Double = 0.0
-        financeItems.forEach { item  ->
+        financeItems.forEach { item ->
             total += item.quantitySold
         }
         return total
@@ -225,12 +229,13 @@ fun FinanceStatsScreen(){
             Log.e(TAG, "Error accessing financeItems: ${e.message}", e)
         }
 
-        Surface(modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 10.dp)
-        ){
-            Column(){
-                Row(Modifier.fillMaxWidth()){
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp)
+        ) {
+            Column() {
+                Row(Modifier.fillMaxWidth()) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = lightGreen),
                         modifier = Modifier
@@ -238,14 +243,20 @@ fun FinanceStatsScreen(){
                             .padding(end = 10.dp),
 
                         ) {
-                        Column(modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth(),
+                        Column(
+                            modifier = Modifier
+                                .padding(10.dp)
+                                .fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
-                        ){
+                        ) {
                             Text(text = "Total Revenue", color = Color.Black)
-                            Text(text = '$' + String.format("%.2f", totalRevenue()), fontSize = 27.sp, fontWeight = FontWeight.Bold, color = Color.Black )
+                            Text(
+                                text = '$' + String.format("%.2f", totalRevenue()),
+                                fontSize = 27.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
                         }
                     }
                     Card(
@@ -254,14 +265,20 @@ fun FinanceStatsScreen(){
                             .weight(0.5f)
                             .padding(start = 10.dp)
                     ) {
-                        Column(modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth(),
+                        Column(
+                            modifier = Modifier
+                                .padding(10.dp)
+                                .fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
-                        ){
+                        ) {
                             Text(text = "Total Quantity", color = Color.Black)
-                            Text(text = String.format("%.0f", totalQuantity()) + " lbs", fontSize = 27.sp, fontWeight = FontWeight.Bold, color= Color.Black )
+                            Text(
+                                text = String.format("%.0f", totalQuantity()) + " lbs",
+                                fontSize = 27.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
                         }
                     }
                 }
@@ -271,7 +288,6 @@ fun FinanceStatsScreen(){
     }
 
 }
-
 
 
 @Preview(showBackground = true)

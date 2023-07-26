@@ -59,7 +59,6 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.data.Inventory_Item
 import com.example.farmconnect.data.Inventory_Items
 import com.example.farmconnect.ui.farmer.MarketPlaceItem
-//import com.example.farmconnect.data.allPosts
 import com.example.farmconnect.ui.theme.darkGreen
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
@@ -71,7 +70,6 @@ import kotlinx.coroutines.tasks.await
 
 
 data class Post(
-//    val userId: String,
     val charity_name: String,
     val charity_location: String,
     val charity_distance: Double,
@@ -81,7 +79,7 @@ data class Post(
     var isClaimed: Boolean = false,
     val documentId: String? = null
 
-){
+) {
     fun doesMatchSearchQuery(query: String): Boolean {
         val matchingCombinations = listOf(
             "$charity_name", "$charity_location", "$item_name",
@@ -92,7 +90,7 @@ data class Post(
     }
 }
 
-class FarmViewModel: ViewModel() {
+class FarmViewModel : ViewModel() {
     private val db = Firebase.firestore
     private val storage = Firebase.storage
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
@@ -103,7 +101,6 @@ class FarmViewModel: ViewModel() {
     private val _isSearching = MutableStateFlow(false)
     val isSearching = _isSearching.asStateFlow()
 
-//    private val _posts = MutableStateFlow(allPosts)
     val _posts = MutableStateFlow<List<Post>>(listOf())
     val posts: StateFlow<List<Post>> = searchText
         .combine(_posts) { text, items ->
@@ -121,6 +118,7 @@ class FarmViewModel: ViewModel() {
             initialValue = _posts.value
         )
     val isLoading = MutableStateFlow(true)
+
     init {
         Log.d(TAG, "init")
         viewModelScope.launch {
@@ -132,7 +130,7 @@ class FarmViewModel: ViewModel() {
     suspend fun updateClaimStatus(documentID: String) {
 
         val charityDocuments = db.collection("charityPosts")
-        if(documentID != null) {
+        if (documentID != null) {
             val docData = charityDocuments.document(documentID).get().await().data;
             var claimedStatus = docData?.getValue("isClaimed")
             Log.d(TAG, claimedStatus.toString())
@@ -142,7 +140,7 @@ class FarmViewModel: ViewModel() {
     }
 
     suspend fun loadItems() {
-        isLoading.emit(true) // Start loading
+        isLoading.emit(true)
         try {
             Log.d(TAG, "load items func")
 
@@ -157,7 +155,6 @@ class FarmViewModel: ViewModel() {
             Log.d(TAG, "charityItems: " + charityItems)
 
 
-            //load all the items from database to local cache
             for (document in documents) {
                 Log.d(TAG, "entered loop document: ")
 
@@ -167,11 +164,11 @@ class FarmViewModel: ViewModel() {
                 val storageRef = storage.reference
                 val imageRef = storageRef.child(docData.getValue("imageId").toString())
 
-                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
+                val TEN_MEGABYTE: Long = 1024 * 1024 * 10
                 val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
                 val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
-                if(if (docData.getValue("isClaimed").toString() == "true") true else false){
+                if (if (docData.getValue("isClaimed").toString() == "true") true else false) {
                     continue;
                 }
 
@@ -179,11 +176,14 @@ class FarmViewModel: ViewModel() {
                     Post(
                         charity_name = docData.getValue("charity_name").toString(),
                         charity_location = docData.getValue("charity_location").toString(),
-                        charity_distance = docData.getValue("charity_distance").toString().toDouble(),
+                        charity_distance = docData.getValue("charity_distance").toString()
+                            .toDouble(),
                         item_name = docData.getValue("item_name").toString(),
                         item_amount = docData.getValue("item_amount").toString().toDouble(),
                         imageBitmap = imageBitmap,
-                        isClaimed = if (docData.getValue("isClaimed").toString() == "true") true else false,
+                        isClaimed = if (docData.getValue("isClaimed")
+                                .toString() == "true"
+                        ) true else false,
                         documentId = document.id
                     )
                 )
@@ -191,7 +191,6 @@ class FarmViewModel: ViewModel() {
             Log.d(TAG, "exit loop")
 
             _posts.emit(charityItems.toList())
-//            _posts.emit(Inventory_Items.item_list.toList())
 
         } catch (exception: Exception) {
             isLoading.emit(false)
@@ -201,13 +200,19 @@ class FarmViewModel: ViewModel() {
     }
 
 
-    fun onSearchTextChange(text: String){
+    fun onSearchTextChange(text: String) {
         _searchText.value = text
     }
 }
+
 @Composable
 //reference from code: https://github.com/Spikeysanju/Wiggles/blob/main/app/src/main/java/dev/spikeysanju/wiggles/component/ItemDogCard.kt
-fun PostCard(post: Post,  claimed: Boolean, viewModel: FarmViewModel,  modifier: Modifier = Modifier){
+fun PostCard(
+    post: Post,
+    claimed: Boolean,
+    viewModel: FarmViewModel,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = Modifier
             .width(410.dp)
@@ -225,7 +230,6 @@ fun PostCard(post: Post,  claimed: Boolean, viewModel: FarmViewModel,  modifier:
                 painter = rememberAsyncImagePainter(model = post.imageBitmap),
                 contentDescription = "image",
                 modifier = Modifier
-//                    .fillMaxWidth()
                     .width(120.dp)
                     .height(120.dp),
                 contentScale = ContentScale.Crop
@@ -278,7 +282,7 @@ fun PostCard(post: Post,  claimed: Boolean, viewModel: FarmViewModel,  modifier:
                     Button(
                         onClick = {
 
-                            viewModel.viewModelScope.launch{
+                            viewModel.viewModelScope.launch {
                                 if (!claimed) {
                                     post.documentId?.let { viewModel.updateClaimStatus(it) } // Call the updateClaimStatus function
                                 }
@@ -297,7 +301,7 @@ fun PostCard(post: Post,  claimed: Boolean, viewModel: FarmViewModel,  modifier:
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CharityModeScreen(){
+fun CharityModeScreen() {
     val viewModel = viewModel<FarmViewModel>()
     val charityPosts by viewModel.posts.collectAsState()
     val searchText by viewModel.searchText.collectAsState()
@@ -328,12 +332,12 @@ fun CharityModeScreen(){
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row{
+        Row {
             TextField(
                 value = searchText,
                 onValueChange = viewModel::onSearchTextChange,
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = {Text(text = "Search")},
+                placeholder = { Text(text = "Search") },
             )
         }
 
