@@ -43,6 +43,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 
@@ -61,15 +62,20 @@ import com.example.farmconnect.R
 import com.example.farmconnect.view.Screens
 import com.example.farmconnect.view.SignIn
 import com.example.farmconnect.data.DataSource
+import com.example.farmconnect.data.user_role
 import com.example.farmconnect.ui.shopping.CartViewModel
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.example.farmconnect.ui.theme.darkGreen
 import com.example.farmconnect.ui.theme.lightGreen
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.delay
 
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,20 +163,28 @@ fun DrawerContent(drawerState: DrawerState, navController: NavController){
         Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
             Column {
                 items.forEach { item ->
-                    NavigationDrawerItem(
-                        icon = { getIcon(title = item.title) },
-                        label = { Text(item.title) },
-                        selected = isSelected(currentRoute, item.route),
-                        colors = colors(selectedContainerColor = lightGreen) ,
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                            }
-                            navController.navigate(item.route)
+                    Log.d("TAGrole3,", user_role.value);
+                    Log.d("TAGrole1,", item.title);
+                    if(((item.title == "Farmer") && (user_role.value == "FARMER"))
+                        || ((item.title == "Shopping Center") && (user_role.value == "BUYER"))
+                        || ((item.title == "Charity") && (user_role.value == "CHARITY"))
+                        || (user_role.value== "ADMIN")){
+                        //navController.navigate(item.route)
+                        NavigationDrawerItem(
+                            icon = { getIcon(title = item.title) },
+                            label = { Text(item.title) },
+                            selected = isSelected(currentRoute, item.route),
+                            colors = colors(selectedContainerColor = lightGreen) ,
+                            onClick = {
+                                scope.launch {
+                                    drawerState.close()
+                                }
+                                navController.navigate(item.route)
 
-                        },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
+                            },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                    }
                 }
             }
 

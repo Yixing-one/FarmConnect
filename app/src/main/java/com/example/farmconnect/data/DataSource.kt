@@ -6,6 +6,7 @@ data class NavItem(
     val title : String,
     val route: String,
 )
+//weeww
 object DataSource {
     val menuOptions = listOf(
         NavItem(
@@ -19,10 +20,7 @@ object DataSource {
         NavItem (
             title="Shopping Center",
             route = Screens.Shopping.name,
-        ),
-        NavItem(
-            title = "Settings",
-            route = Screens.Settings.name,
         )
     )
 }
+object user_role {var value = ""}

@@ -97,6 +97,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.example.farmconnect.data.user_role
 import com.example.farmconnect.ui.farmer.AddPostingsMarketScreen
 import com.example.farmconnect.ui.farmer.EditMarketScreen
 import com.example.farmconnect.ui.farmer.EditMarketplaceScreen
@@ -143,6 +144,7 @@ enum class Screens(@StringRes val title: Int) {
     Settings(title = R.string.settings)
 }
 
+lateinit var currentScreen: Screens
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -150,9 +152,27 @@ fun App() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     // Get the name of the current screen
-    val currentScreen = Screens.valueOf(
-        backStackEntry?.destination?.route ?: Screens.Farm.name
-    )
+    Log.d("TAGscreen,", user_role.value);
+    if(user_role.value == "FARMER") {
+        currentScreen = Screens.valueOf(
+            backStackEntry?.destination?.route ?: Screens.Farm.name
+        )
+    } else if (user_role.value == "CHARITY") {
+        Log.d("TAGscreen,", "2");
+        currentScreen = Screens.valueOf(
+            backStackEntry?.destination?.route ?: Screens.Charity.name
+        )
+    } else if (user_role.value == "BUYER") {
+        Log.d("TAGscreen,", "3");
+        currentScreen = Screens.valueOf(
+            backStackEntry?.destination?.route ?: Screens.Shopping.name
+        )
+    } else {
+        Log.d("TAGscreen,", "4");
+        currentScreen = Screens.valueOf(
+            backStackEntry?.destination?.route ?: Screens.Farm.name
+        )
+    }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val cartViewModel = viewModel<CartViewModel>();
@@ -205,7 +225,8 @@ fun App() {
                 Column() {
                     NavHost(
                         navController = navController,
-                        startDestination = Screens.Farm.name
+                        //startDestination = Screens.Farm.name
+                        startDestination = currentScreen.name
 
                     ) {
                         //Farm mode:
