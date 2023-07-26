@@ -54,7 +54,7 @@ class CartViewModel: ViewModel() {
             if(financeColRef.whereEqualTo("userId", item.userId).limit(1).get().await().documents.size == 0){
                 // add new field for this farmer
                 financeColRef.add(
-                    mapOf("items" to data, "userId" to item.userId)
+                    hashMapOf("items" to listOf(data), "userId" to item.userId)
                 );
 
             } else {
