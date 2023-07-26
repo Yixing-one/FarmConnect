@@ -19,10 +19,7 @@ object DataSource {
         NavItem (
             title="Shopping Center",
             route = Screens.Shopping.name,
-        ),
-        NavItem(
-            title = "Settings",
-            route = Screens.Settings.name,
         )
     )
 }
+object user_role {var value = ""}
