@@ -121,9 +121,9 @@ fun PanelItemCard(
 fun getFarmerModeIcons(title: String): Painter {
     return when (title) {
         "Finance" -> painterResource(id = R.drawable.baseline_agriculture_24)
-        "Marketplace" -> painterResource(id = R.drawable.baseline_back_hand_24)
-        "Donate" -> painterResource(id = R.drawable.donate)
-        else -> painterResource(id = R.drawable.baseline_back_hand_24) // Replace with a default icon if needed
+        "Marketplace" -> painterResource(id = R.drawable.shoppingcenter)
+        "Donate" -> painterResource(id = R.drawable.hand)
+        else -> painterResource(id = R.drawable.inventoryicon) // Replace with a default icon if needed
     }
 }
 

@@ -124,7 +124,7 @@ fun getIcon(title : String) {
     when(title){
         "Farmer" -> Icon(painter = painterResource(id = R.drawable.baseline_agriculture_24), contentDescription = null)
         "Charity" -> Icon(painter = painterResource(id = R.drawable.baseline_back_hand_24), contentDescription = null )
-        "Shopping Center" -> Icon(painter = painterResource(id = R.drawable.baseline_back_hand_24), contentDescription = null )
+        "Shopping Center" -> Icon(painter = painterResource(id = R.drawable.shoppingcenter), modifier = Modifier.size(25.dp),contentDescription = null )
         "Settings" -> Icon(imageVector = Icons.Filled.Settings, contentDescription = null )
     }
 
