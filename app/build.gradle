@@ -49,6 +49,12 @@ android {
 }
 
 dependencies {
+    //add support for glide
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
+    implementation "com.github.bumptech.glide:compose:1.0.0-alpha.1"
+
+
 
     implementation "androidx.navigation:navigation-compose:2.5.0"
     implementation 'androidx.core:core-ktx:1.8.0'
@@ -104,6 +110,7 @@ dependencies {
     // ViewModel
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version"
 
+//    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:1.0.0-alpha07"
 
     //permission handling in compose
     implementation 'com.google.accompanist:accompanist-permissions:0.24.11-rc'

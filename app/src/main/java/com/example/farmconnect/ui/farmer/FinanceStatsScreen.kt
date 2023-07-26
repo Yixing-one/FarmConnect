@@ -1,7 +1,6 @@
 package com.example.farmconnect.ui.farmer
 
 import android.content.ContentValues.TAG
-import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,20 +33,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.farmconnect.ui.shopping.MarketplaceItem
 import com.example.farmconnect.ui.theme.FarmConnectTheme
 import com.example.farmconnect.ui.theme.lightGreen
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
@@ -55,7 +48,7 @@ import java.util.Locale
 
 //credits: https://maneesha-erandi.medium.com/kotlin-with-jetpack-compose-data-tables-c28faf4334d9
 
-class FinanceViewModel: ViewModel() {
+class FinanceViewModel : ViewModel() {
     private val db = Firebase.firestore
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
 
@@ -69,23 +62,28 @@ class FinanceViewModel: ViewModel() {
     }
 
     private suspend fun loadItems() {
-        val financeItems = db.collection("finance")
-            .whereEqualTo("userId", currentUserId)
-            .get()
-            .await().documents[0].data?.getValue("items") as List<HashMap<*,*>>
+        try {
+            val financeItems = db.collection("finance")
+                .whereEqualTo("userId", currentUserId)
+                .get()
+                .await().documents[0].data?.getValue("items") as List<HashMap<*, *>>
 
-        val itemsList = mutableListOf<TableItem>()
-        for (item in financeItems) {
-            val item = TableItem(
-                name = item["name"].toString(),
-                quantitySold = item["quantitySold"] as? Double ?: 0.0,
-                dateSold = item["dateSold"] as? Timestamp ?: Timestamp.now(),
-                revenue = item["revenue"] as? Double ?: 0.0
-            )
-            itemsList.add(item)
+            val itemsList = mutableListOf<TableItem>()
+            for (item in financeItems) {
+                val item = TableItem(
+                    name = item["name"].toString(),
+                    quantitySold = (item["quantitySold"] as Long).toDouble(),
+                    dateSold = item["dateSold"] as? Timestamp ?: Timestamp.now(),
+                    revenue = item["revenue"] as? Double ?: 0.0
+                )
+                itemsList.add(item)
+            }
+
+            _items.emit(itemsList)
+
+        } catch (e: Exception) {
+            Log.d(TAG, e.message.toString())
         }
-
-        _items.emit(itemsList)
     }
 }
 
@@ -115,17 +113,17 @@ fun RowScope.Cell(
 
 
 @Composable
-fun DataTable(){
+fun DataTable() {
 
     val viewModel = viewModel<FinanceViewModel>()
     val financeItems by viewModel.items.collectAsState()
 
-    LazyColumn(Modifier.padding(vertical = 10.dp)){
+    LazyColumn(Modifier.padding(vertical = 10.dp)) {
         item {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
-            ){
+            ) {
                 Cell(
                     text = "Item",
                     alignment = TextAlign.Left,
@@ -175,7 +173,10 @@ fun DataTable(){
                     weight = .15f
                 )
                 Cell(
-                    text = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(item.dateSold.toDate()),
+                    text = SimpleDateFormat(
+                        "dd MMMM yyyy",
+                        Locale.getDefault()
+                    ).format(item.dateSold.toDate()),
                     alignment = TextAlign.Center,
                     weight = .3f
                 )
@@ -197,27 +198,28 @@ fun DataTable(){
 }
 
 @Composable
-fun FinanceStatsScreen(){
+fun FinanceStatsScreen() {
 
     val viewModel = viewModel<FinanceViewModel>()
     val financeItems by viewModel.items.collectAsState()
 
 
-    fun totalRevenue(): Double{
+    fun totalRevenue(): Double {
         var total: Double = 0.0
-        financeItems.forEach { item  ->
+        financeItems.forEach { item ->
             total += item.revenue
         }
         return total
     }
+
     fun totalQuantity(): Double {
         var total: Double = 0.0
-        financeItems.forEach { item  ->
+        financeItems.forEach { item ->
             total += item.quantitySold
         }
         return total
     }
-
+    Log.d(TAG, financeItems.size.toString())
     if (financeItems.isNotEmpty()) {
         try {
             val firstItem = financeItems[0]
@@ -227,12 +229,13 @@ fun FinanceStatsScreen(){
             Log.e(TAG, "Error accessing financeItems: ${e.message}", e)
         }
 
-        Surface(modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 10.dp)
-        ){
-            Column(){
-                Row(Modifier.fillMaxWidth()){
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp)
+        ) {
+            Column() {
+                Row(Modifier.fillMaxWidth()) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = lightGreen),
                         modifier = Modifier
@@ -240,14 +243,20 @@ fun FinanceStatsScreen(){
                             .padding(end = 10.dp),
 
                         ) {
-                        Column(modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth(),
+                        Column(
+                            modifier = Modifier
+                                .padding(10.dp)
+                                .fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
-                        ){
+                        ) {
                             Text(text = "Total Revenue", color = Color.Black)
-                            Text(text = '$' + String.format("%.2f", totalRevenue()), fontSize = 27.sp, fontWeight = FontWeight.Bold, color = Color.Black )
+                            Text(
+                                text = '$' + String.format("%.2f", totalRevenue()),
+                                fontSize = 27.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
                         }
                     }
                     Card(
@@ -256,14 +265,20 @@ fun FinanceStatsScreen(){
                             .weight(0.5f)
                             .padding(start = 10.dp)
                     ) {
-                        Column(modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth(),
+                        Column(
+                            modifier = Modifier
+                                .padding(10.dp)
+                                .fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
-                        ){
+                        ) {
                             Text(text = "Total Quantity", color = Color.Black)
-                            Text(text = String.format("%.0f", totalQuantity()) + " lbs", fontSize = 27.sp, fontWeight = FontWeight.Bold, color= Color.Black )
+                            Text(
+                                text = String.format("%.0f", totalQuantity()) + " lbs",
+                                fontSize = 27.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
                         }
                     }
                 }
@@ -273,7 +288,6 @@ fun FinanceStatsScreen(){
     }
 
 }
-
 
 
 @Preview(showBackground = true)

@@ -1,5 +1,7 @@
 package com.example.farmconnect.ui.shopping
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -14,11 +16,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
@@ -33,18 +35,35 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.farmconnect.R
 import com.example.farmconnect.ui.theme.FarmConnectTheme
+import com.example.farmconnect.view.Screens
+import kotlinx.coroutines.launch
 
 @Composable
 fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
+    fun isEnabled(): Boolean {
+        val grouped = cartViewModel.items.groupBy { it.id }
+        if(!grouped.containsKey(item.id)){
+            return true;
+        }
+        val addedQuantity = grouped[item.id]?.size
+        if (addedQuantity != null) {
+            return addedQuantity <= item.quantityRemaining - 1
+        }
+        return true;
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -89,7 +108,7 @@ fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
                         )
                     }
                 }
-                Text(text = "${item.quantityRemaining} lbs", style = MaterialTheme.typography.titleMedium)
+                Text(text = "${item.quantityRemaining} lbs available", style = MaterialTheme.typography.titleMedium)
                 Row( Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     Row {
@@ -113,13 +132,14 @@ fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
                                     )
                             )
                         }
-                        Text(text = "$quantity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 5.dp, end = 5.dp))
+                        Text(text = "$quantity lb", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 5.dp, end = 5.dp))
                         IconButton(onClick = { cartViewModel.addToCart(item) },
                             Modifier
                                 .clip(RoundedCornerShape(10.dp))
                                 .padding(0.dp)
                                 .size(24.dp)
-                                .background(color = Color.White)
+                                .background(color = Color.White),
+                            enabled = isEnabled()
                         )
                         {
                             Icon(
@@ -142,14 +162,26 @@ fun CartItem(item: MarketplaceItem, quantity:Int, cartViewModel: CartViewModel){
     }
 }
 
-fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
-    val allItems = cartViewModel.items
-    val items = cartViewModel.items.toSet().toList()
+fun callCheckout(cartViewModel: CartViewModel, navController: NavController, context: Context){
+    cartViewModel.viewModelScope.launch {
+        cartViewModel.checkOut()
+        navController.navigate(Screens.Shopping.name)
+        Toast.makeText(context,"Successfully checked out", Toast.LENGTH_SHORT).show()
+
+    }
+}
+fun LazyListScope.CartTotal(
+    cartViewModel: CartViewModel,
+    navController: NavController,
+    context: Context
+){
+
+    val groupedItems = cartViewModel.items.groupBy { it.id }
     fun getTotal(): String {
         var total : Double = 0.0;
-        items.forEach { item ->
-            val quantity = allItems.count {it == item}
-            total += item.price * quantity;
+        groupedItems.forEach { entry ->
+            val quantity = entry.value.size;
+            total += entry.value.first().price * quantity;
         }
         return String.format("%.2f", total)
     }
@@ -163,13 +195,24 @@ fun LazyListScope.CartTotal(cartViewModel: CartViewModel){
             Text(text = "$ ${getTotal()}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(30.dp))
+
+            Button(onClick = { callCheckout(cartViewModel, navController, context) } , modifier = Modifier.fillMaxWidth()) {
+                Text(text = "Checkout", style = MaterialTheme.typography.titleLarge)
+
+        }
+
     }
 }
 
 @Composable
-fun CartScreen(cartViewModel: CartViewModel){
-    val allItems = cartViewModel.items
-    val items = cartViewModel.items.toSet().toList()
+fun CartScreen(cartViewModel: CartViewModel, navController: NavController){
+    val grouped = cartViewModel.items.groupBy { it.id }
+    val cartItems = mutableListOf<MarketplaceItem>();
+    val context = LocalContext.current;
+    grouped.forEach { entry ->
+        cartItems.add(entry.value.first());
+        print("${entry.key} : ${entry.value}")
+    }
 
     Surface(modifier = Modifier
         .fillMaxSize()
@@ -178,7 +221,7 @@ fun CartScreen(cartViewModel: CartViewModel){
         Column {
             Text("Your cart", style = MaterialTheme.typography.titleLarge,)
             Spacer(modifier = Modifier.height(10.dp))
-            if (items.isEmpty()){
+            if (grouped.isEmpty()){
                 Card(
                     Modifier
                         .fillMaxWidth()
@@ -193,11 +236,11 @@ fun CartScreen(cartViewModel: CartViewModel){
                 
             } else {
                 LazyColumn {
-                    items(items.size) { item ->
-                        CartItem(item = items[item], quantity = allItems.count { it == items[item]}, cartViewModel)
+                    items(cartItems.size) { item ->
+                        grouped[cartItems[item].id]?.let { CartItem(item = cartItems[item], quantity = it.size, cartViewModel) }
 
                     }
-                    CartTotal(cartViewModel = cartViewModel)
+                    CartTotal(cartViewModel = cartViewModel, navController, context)
                 }
 
             }
@@ -209,9 +252,10 @@ fun CartScreen(cartViewModel: CartViewModel){
 @Composable
 fun CartScreenPreview(){
     val cartViewModel = viewModel<CartViewModel>();
+    val navController = rememberNavController()
     FarmConnectTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            CartScreen(cartViewModel)
+            CartScreen(cartViewModel, navController = navController )
         }
     }
 }

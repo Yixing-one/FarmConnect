@@ -48,9 +48,14 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 
 class MainViewModel: ViewModel() {
@@ -98,36 +103,53 @@ class MainViewModel: ViewModel() {
                 .get()
                 .await()
 
-            val marketItems = ArrayList<MarketplaceItem>()
+            // Initialize list to store Jobs
+            val jobs = mutableListOf<Job>()
+
+            // Mutable list to store MarketplaceItem
+            val marketItems = mutableListOf<MarketplaceItem>()
 
             for (document in documents) {
-                val docData = document.data
-                val storageRef = storage.reference
-                val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+                jobs.add(GlobalScope.launch {
+                    val docData = document.data
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
 
-                val TEN_MEGABYTE:Long = 1024 * 1024 * 10
-                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    val TEN_MEGABYTE:Long = 1024 * 1024 * 10
+                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
-                marketItems.add(
-                    MarketplaceItem(
-                        name = docData.getValue("name").toString(),
-                        price = docData.getValue("price").toString().toDouble(),
-                        quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
-                        imageBitmap = imageBitmap,
-                        userId = docData.getValue("userId").toString()
-                    )
-                )
+                    // Ensure that the items are added in the Main thread if you plan to update the UI immediately
+                    withContext(Dispatchers.Main) {
+                        if(docData.getValue("quantityRemaining").toString().toInt() > 0){
+                            marketItems.add(
+                                MarketplaceItem(
+                                    id = document.id.toString(),
+                                    name = docData.getValue("name").toString(),
+                                    price = docData.getValue("price").toString().toDouble(),
+                                    quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
+                                    imageBitmap = imageBitmap,
+                                    userId = docData.getValue("userId").toString()
+                                )
+                            )
+                        }
+                    }
+                })
             }
+
+            // Wait for all jobs to complete
+            jobs.joinAll()
 
             _items.emit(marketItems.toList())
 
         } catch (exception: Exception) {
+            Log.d("error", exception.message.toString())
             isLoading.emit(false)
         } finally {
             isLoading.emit(false)
         }
     }
+
 
     fun onSearchTextChange(text: String){
         _searchText.value = text
@@ -135,6 +157,7 @@ class MainViewModel: ViewModel() {
 
 }
 data class MarketplaceItem(
+    val id: String,
     val name: String,
     val price: Double,
     val quantityRemaining: Int,
@@ -154,6 +177,18 @@ data class MarketplaceItem(
 
 @Composable
 fun ItemCard(item: MarketplaceItem, modifier: Modifier = Modifier, cartViewModel: CartViewModel){
+    fun isEnabled(): Boolean {
+        val grouped = cartViewModel.items.groupBy { it.id }
+        if(!grouped.containsKey(item.id)){
+            return true;
+        }
+        val addedQuantity = grouped[item.id]?.size
+        if (addedQuantity != null) {
+            return addedQuantity <= item.quantityRemaining - 1
+        }
+        return true;
+    }
+
     Card(
         modifier = modifier.width(150.dp).height(260.dp)
     ) {
@@ -167,7 +202,7 @@ fun ItemCard(item: MarketplaceItem, modifier: Modifier = Modifier, cartViewModel
                 contentScale = ContentScale.Crop
             )
             Text(
-                text = "$${item.price}",
+                text = "$${item.price}/lb",
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 10.dp, bottom = 7.dp),
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -177,12 +212,13 @@ fun ItemCard(item: MarketplaceItem, modifier: Modifier = Modifier, cartViewModel
                 style = MaterialTheme.typography.titleSmall,
             )
             Text(
-                text = "${item.quantityRemaining} lb",
+                text = "${item.quantityRemaining} lb available",
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 0.dp, bottom = 10.dp),
                 style = MaterialTheme.typography.bodySmall,
             )
             Button(
                 onClick = { cartViewModel.addToCart(item) },
+                enabled = isEnabled(),
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(7.5.dp)
             ) {
                 Text(text = "Add to Cart", style = MaterialTheme.typography.bodySmall)
