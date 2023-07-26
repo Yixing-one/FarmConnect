@@ -24,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,21 +51,16 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 
-class MarketPlaceViewModel: ViewModel() {
+class MarketPlaceViewModel : ViewModel() {
     private val db = Firebase.firestore
     private val storage = Firebase.storage
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.toString()
@@ -106,47 +100,36 @@ class MarketPlaceViewModel: ViewModel() {
     }
 
     private suspend fun loadItems() {
-        isLoading.emit(true) // Start loading
+        isLoading.emit(true)
         try {
             val documents = db.collection("marketplace")
                 .whereEqualTo("userId", currentUserId)
                 .get()
                 .await()
 
-            // Initialize empty list to store Jobs
-            val jobs = mutableListOf<Job>()
-
-            // Mutable list to store MarketPlaceItem
-            val marketItems = mutableListOf<MarketPlaceItem>()
+            val marketItems = ArrayList<MarketPlaceItem>()
 
             for (document in documents) {
-                jobs.add(GlobalScope.launch {
-                    val docData = document.data
-                    val storageRef = storage.reference
-                    val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
+                val docData = document.data
+                val storageRef = storage.reference
+                val imageRef = storageRef.child(docData.getValue("imageUrl").toString())
 
-                    val TEN_MEGABYTE: Long = 1024 * 1024 * 10
-                    val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
-                    val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                val TEN_MEGABYTE: Long = 1024 * 1024 * 10
+                val bytes = imageRef.getBytes(TEN_MEGABYTE).await()
+                val imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
-                    // Make sure to add items on main thread if you are going to update UI immediately
-                    withContext(Dispatchers.Main) {
-                        marketItems.add(
-                            MarketPlaceItem(
-                                documentId = document.id,
-                                name = docData.getValue("name").toString(),
-                                price = docData.getValue("price").toString().toDouble(),
-                                quantityRemaining = docData.getValue("quantityRemaining").toString().toInt(),
-                                quantitySold = docData.getValue("quantitySold").toString().toInt(),
-                                imageBitmap = imageBitmap
-                            )
-                        )
-                    }
-                })
+                marketItems.add(
+                    MarketPlaceItem(
+                        documentId = document.id,
+                        name = docData.getValue("name").toString(),
+                        price = docData.getValue("price").toString().toDouble(),
+                        quantityRemaining = docData.getValue("quantityRemaining").toString()
+                            .toInt(),
+                        quantitySold = docData.getValue("quantitySold").toString().toInt(),
+                        imageBitmap = imageBitmap
+                    )
+                )
             }
-
-            // Wait for all jobs to complete
-            jobs.joinAll()
 
             _items.emit(marketItems.toList())
 
@@ -157,8 +140,7 @@ class MarketPlaceViewModel: ViewModel() {
         }
     }
 
-
-    fun onSearchTextChange(text: String){
+    fun onSearchTextChange(text: String) {
         _searchText.value = text
     }
 }
@@ -182,13 +164,13 @@ data class MarketPlaceItem(
 }
 
 @Composable
-fun MarketItemCard(item: MarketPlaceItem, modifier: Modifier = Modifier){
+fun MarketItemCard(item: MarketPlaceItem, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier
             .width(350.dp)
             .height(270.dp)
     ) {
-        Column{
+        Column {
             Image(
                 painter = rememberAsyncImagePainter(model = item.imageBitmap),
                 contentDescription = "image",
@@ -212,22 +194,17 @@ fun MarketItemCard(item: MarketPlaceItem, modifier: Modifier = Modifier){
                 modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 0.dp, bottom = 10.dp),
                 style = MaterialTheme.typography.bodySmall,
             )
-            if(item.quantitySold != 0){
-//                Image(
-//                    painter = painterResource(R.drawable.plus_sign),
-//                    contentDescription = "image",
-//                    modifier = Modifier
-//                        .width(40.dp)
-//                        .height(40.dp)
-//                        .padding(5.dp, 0.dp),
-//                    contentScale = ContentScale.Fit
-//                )
+            if (item.quantitySold != 0) {
                 Text(
                     text = "Sold ${item.quantitySold} lb",
-                    modifier = Modifier.padding(start = 13.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
+                    modifier = Modifier.padding(
+                        start = 13.dp,
+                        end = 10.dp,
+                        top = 3.dp,
+                        bottom = 3.dp
+                    ),
                     style = TextStyle(
                         fontSize = 15.sp,
-//                        color = Color.Blue,
                         fontWeight = FontWeight.Bold
                     )
                 )
@@ -238,128 +215,69 @@ fun MarketItemCard(item: MarketPlaceItem, modifier: Modifier = Modifier){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MarketScreen(navController: NavController){
+fun MarketScreen(navController: NavController) {
     val viewModel = viewModel<MarketPlaceViewModel>()
     val searchText by viewModel.searchText.collectAsState()
     val theFoodItems by viewModel.items.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        if (isLoading) {
-            Box(
+        Row {
+            TextField(
+                value = searchText,
+                onValueChange = viewModel::onSearchTextChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(text = "Search") },
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row {
+            Button(
+                onClick = { navController.navigate(Screens.EditMarketplace.name) },
+                colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+                    .weight(1f)
+                    .fillMaxWidth()
             ) {
-                CircularProgressIndicator() // Show loading indicator
+                Text(text = "Edit Postings")
             }
 
-        } else {
-            Row {
-                TextField(
-                    value = searchText,
-                    onValueChange = viewModel::onSearchTextChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(text = "Search") },
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Button(
+                onClick = { navController.navigate(Screens.AddPostingMarketplace.name) },
+                colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                Text(text = "Add Postings")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 128.dp)
+        ) {
+            items(theFoodItems.size) { item ->
+                MarketItemCard(
+                    item = theFoodItems.get(item),
+                    modifier = Modifier.padding(8.dp)
                 )
             }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row {
-                Button(
-                    onClick = { navController.navigate(Screens.EditMarketplace.name) },
-                    colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    Text(text = "Edit Postings")
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Button(
-                    onClick = { navController.navigate(Screens.AddPostingMarketplace.name) },
-                    colors = ButtonDefaults.buttonColors(containerColor = darkGreen),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    Text(text = "Add Postings")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 128.dp)
-            ) {
-                items(theFoodItems.size) { item ->
-                    MarketItemCard(
-                        item = theFoodItems.get(item),
-                        modifier = Modifier.padding(8.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(150.dp))
-
-//        Row(verticalAlignment = Alignment.Bottom) {
-////            Spacer(modifier = Modifier.width(150.dp))
-//            Box(
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//            ) {
-//                Column(
-//                    modifier = Modifier
-//                        .fillMaxSize()
-//                        .padding(16.dp)
-//                ) {
-//                    // Your other content here...
-//
-//                    Spacer(modifier = Modifier.height(10.dp))
-//
-//                    // The two Text elements in the Column
-////                    Text(
-////                        text = "Total earning on June 26:",
-////                        style = TextStyle(
-////                            fontSize = 20.sp,
-////                            color = Color.Blue,
-////                            fontWeight = FontWeight.Bold
-////                        ),
-////                        modifier = Modifier
-////                            .fillMaxWidth()
-////                            .padding(8.dp, 3.dp, 5.dp, 0.dp),
-////                    )
-////
-////                    Text(
-////                        text = "   610 CAD",
-////                        style = TextStyle(
-////                            fontSize = 20.sp,
-////                            color = Color.Cyan,
-////                            fontWeight = FontWeight.Bold
-////                        ),
-////                        modifier = Modifier
-////                            .fillMaxWidth()
-////                            .padding(8.dp, 3.dp, 5.dp, 0.dp),
-////                    )
-//                }
-//            }
-//        }
         }
+        Spacer(modifier = Modifier.height(150.dp))
     }
-
-
 }
 
 @Composable
-fun MarketplaceScreen(){
+fun MarketplaceScreen() {
     val navController = rememberNavController()
     FarmConnectTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
