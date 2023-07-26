@@ -53,8 +53,8 @@ class CartViewModel: ViewModel() {
             // check if farmer id exists in finance
             if(financeColRef.whereEqualTo("userId", item.userId).limit(1).get().await().documents.size == 0){
                 // add new field for this farmer
-                financeColRef.add(
-                    mapOf("items" to data, "userId" to item.userId)
+                financeColRef.add( FieldValue.arrayUnion(mapOf("items" to data, "userId" to item.userId))
+
                 );
 
             } else {
