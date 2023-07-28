@@ -44,5 +44,6 @@
 | 2023/07/25 | 7                | 9                  | 6                 | 4              | 8                   | 6               | Merging all tickets and resolving tickets 																					      |
 | 2023/07/25 | 10               | 10                 | 10                | 10             | 10                  | 10              | Total Stand-up meeting hours 																						      |
 | 2023/07/25 | 0                | 0                  | 0                 | 8              | 0                   | 0                | Implemented user choice between charity, farmer, and marketplace mode and admin 	
-| 2023/07/25 | 0                | 0                  | 4                 | 8              | 0                   | 0                | voice recognition now updates quantity with the database and refreshes UI to show quantity
+| 2023/07/25 | 0                | 4                  | 0                 | 8              | 0                   | 0                | voice recognition now updates quantity with the database and refreshes UI to show quantity
+| 2023/07/28 | 0                | 0                  | 5                 | 5              | 0                   | 5                | Completed the D6 deliverable  
 
